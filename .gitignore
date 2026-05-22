@@ -1,0 +1,15 @@
+# ─── Runtime Data ───
+dms-data/
+logs/
+
+# ─── Environment (contains secrets) ───
+.env
+
+# ─── IDE ───
+.idea/
+.vscode/
+*.iml
+
+# ─── OS ───
+.DS_Store
+Thumbs.db

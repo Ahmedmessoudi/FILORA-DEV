@@ -16,4 +16,5 @@ public interface PartnerEntityRepository extends JpaRepository<PartnerEntity, In
     Optional<PartnerEntity> findByPartnerAndCompany(Partner partner, CompanyEntity company);
     boolean existsByPartnerAndCompany(Partner partner, CompanyEntity company);
     void deleteByPartner(Partner partner);
+    void deleteByCompany(CompanyEntity company);
 }

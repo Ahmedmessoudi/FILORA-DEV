@@ -4,6 +4,9 @@ import com.filora.dms.config.AppProperties;
 import com.filora.dms.entity.CompanyEntity;
 import com.filora.dms.entity.User;
 import com.filora.dms.repository.CompanyEntityRepository;
+import com.filora.dms.repository.DatatypeEntityRepository;
+import com.filora.dms.repository.PartnerEntityRepository;
+import com.filora.dms.repository.UserEntityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,9 @@ import java.util.Optional;
 public class EntityService {
 
     private final CompanyEntityRepository companyEntityRepository;
+    private final UserEntityRepository userEntityRepository;
+    private final DatatypeEntityRepository datatypeEntityRepository;
+    private final PartnerEntityRepository partnerEntityRepository;
     private final AppProperties appProperties;
     private final AuditService auditService;
 
@@ -81,6 +87,9 @@ public class EntityService {
         CompanyEntity company = companyEntityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entity not found: " + id));
 
+        userEntityRepository.deleteByCompany(company);
+        datatypeEntityRepository.deleteByCompany(company);
+        partnerEntityRepository.deleteByCompany(company);
         companyEntityRepository.delete(company);
 
         Map<String, Object> details = new HashMap<>();

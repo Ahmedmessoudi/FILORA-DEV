@@ -16,4 +16,5 @@ public interface UserEntityRepository extends JpaRepository<UserEntity, Integer>
     Optional<UserEntity> findByUserAndCompany(User user, CompanyEntity company);
     boolean existsByUserAndCompany(User user, CompanyEntity company);
     void deleteByUser(User user);
+    void deleteByCompany(CompanyEntity company);
 }

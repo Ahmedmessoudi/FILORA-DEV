@@ -74,3 +74,8 @@ filora:
     supported-languages: ${SUPPORTED_LANGUAGES:fr,en}
   frontend:
     url: ${FRONTEND_URL:http://localhost:4200}
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_EMAIL:}
+    password: ${SMTP_PASSWORD:}

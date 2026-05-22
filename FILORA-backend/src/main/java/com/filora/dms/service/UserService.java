@@ -118,6 +118,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
 
+        userEntityRepository.deleteByUser(user);
         userRepository.delete(user);
 
         Map<String, Object> details = new HashMap<>();

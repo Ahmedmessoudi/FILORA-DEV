@@ -127,6 +127,8 @@ public class PartnerService {
         Partner partner = partnerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Partner not found: " + id));
 
+        partnerEntityRepository.deleteByPartner(partner);
+        partnerPartnerTypeRepository.deleteByPartner(partner);
         partnerRepository.delete(partner);
 
         Map<String, Object> details = new HashMap<>();

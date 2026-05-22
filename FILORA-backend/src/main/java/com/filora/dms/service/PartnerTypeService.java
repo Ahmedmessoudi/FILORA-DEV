@@ -17,6 +17,7 @@ import java.util.Optional;
 public class PartnerTypeService {
 
     private final PartnerTypeRepository partnerTypeRepository;
+    private final com.filora.dms.repository.PartnerPartnerTypeRepository partnerPartnerTypeRepository;
     private final AuditService auditService;
 
     public List<PartnerType> getAllPartnerTypes() {
@@ -63,6 +64,7 @@ public class PartnerTypeService {
         PartnerType type = partnerTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("PartnerType not found: " + id));
 
+        partnerPartnerTypeRepository.deleteByPartnerType(type);
         partnerTypeRepository.delete(type);
 
         Map<String, Object> details = new HashMap<>();

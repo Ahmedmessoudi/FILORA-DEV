@@ -70,6 +70,7 @@ public class DocTypeService {
         DocType docType = docTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("DocType not found: " + id));
 
+        datatypeEntityRepository.deleteByDocType(docType);
         docTypeRepository.delete(docType);
 
         Map<String, Object> details = new HashMap<>();

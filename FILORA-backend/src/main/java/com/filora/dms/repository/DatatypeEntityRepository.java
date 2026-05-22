@@ -16,4 +16,5 @@ public interface DatatypeEntityRepository extends JpaRepository<DatatypeEntity, 
     Optional<DatatypeEntity> findByDocTypeAndCompany(DocType docType, CompanyEntity company);
     boolean existsByDocTypeAndCompany(DocType docType, CompanyEntity company);
     void deleteByDocType(DocType docType);
+    void deleteByCompany(CompanyEntity company);
 }
