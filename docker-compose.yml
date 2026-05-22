@@ -1,0 +1,80 @@
+version: '3.9'
+
+services:
+  # ─── PostgreSQL 16 ───
+  filora-db:
+    image: postgres:16-alpine
+    container_name: filora-db
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${SYSTEM_DB_NAME}
+      POSTGRES_USER: ${SYSTEM_DB_USERNAME}
+      POSTGRES_PASSWORD: ${SYSTEM_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SYSTEM_DB_USERNAME} -d ${SYSTEM_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - filora-net
+
+  # ─── Spring Boot Backend ───
+  filora-backend:
+    build:
+      context: ./FILORA-backend
+      dockerfile: Dockerfile
+    container_name: filora-backend
+    env_file: .env
+    depends_on:
+      filora-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dms-data/upload:/app/dms-data/upload
+      - ./logs:/app/logs
+    networks:
+      - filora-net
+
+  # ─── FastAPI OCR Agent ───
+  filora-ocr-agent:
+    build:
+      context: ./FILORA-OCR-agent
+      dockerfile: Dockerfile
+    container_name: filora-ocr-agent
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./dms-data/upload:/app/dms-data/upload
+    networks:
+      - filora-net
+
+  # ─── Angular Frontend (Nginx) ───
+  filora-frontend:
+    build:
+      context: ./FILORA-frontend
+      dockerfile: Dockerfile
+    container_name: filora-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - filora-backend
+    networks:
+      - filora-net
+
+volumes:
+  pgdata:
+    driver: local
+  dms_data:
+    driver: local
+  logs_data:
+    driver: local
+
+networks:
+  filora-net:
+    driver: bridge

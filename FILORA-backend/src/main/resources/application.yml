@@ -1,0 +1,76 @@
+# ─── Filora DMS — Application Configuration ───
+spring:
+  application:
+    name: Filora
+
+  # ─── PostgreSQL DataSource ───
+  datasource:
+    url: jdbc:postgresql://${SYSTEM_DB_HOST:localhost}:${SYSTEM_DB_PORT:5432}/${SYSTEM_DB_NAME:filora_db}
+    username: ${SYSTEM_DB_USERNAME:filora}
+    password: ${SYSTEM_DB_PASSWORD:filora_secret_2024}
+    driver-class-name: org.postgresql.Driver
+
+  # ─── JPA / Hibernate ───
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  # ─── File Upload ───
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${SYSTEM_MAX_FILE_SIZE:1024}KB
+      max-request-size: 10MB
+
+  # ─── SMTP ───
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_EMAIL:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# ─── Server ───
+server:
+  port: 8080
+
+# ─── Custom Filora Properties ───
+filora:
+  jwt:
+    secret: ${JWT_SECRET:c29tZVN1cGVyU2VjcmV0S2V5VGhhdElzQXRMZWFzdDMyQnl0ZXNMb25n}
+    expiry-minutes: ${JWT_EXPIRY_MINUTES:60}
+  security:
+    two-factor-enabled: ${TWO_FACTOR_ENABLED:true}
+    two-factor-method: ${TWO_FACTOR_METHOD:EMAIL}
+    max-login-attempts: 5
+    lockout-duration-minutes: 15
+  storage:
+    data-path: ${ENTITIES_DATA_PATH:/app/dms-data/upload}
+    logs-path: ${SYSTEM_LOGS_PATH:/app/logs}
+  ocr:
+    service-url: ${OCR_SERVICE_URL:http://localhost:8000}
+    confidence-threshold: ${OCR_CONFIDENCE_THRESHOLD:0.75}
+  system:
+    name: ${SYSTEM_NAME:FiloraDEV}
+    enabled: ${SYSTEM_ENABLED:true}
+    max-users: ${SYSTEM_MAX_USERS:12}
+    max-entities: ${SYSTEM_MAX_ENTITIES:4}
+    max-external-entities: ${SYSTEM_MAX_EXTERNAL_ENTITIES:4}
+    max-file-size: ${SYSTEM_MAX_FILE_SIZE:1024}
+    currency: ${CURRENCY:TND}
+    default-language: ${DEFAULT_LANGUAGE:fr}
+    supported-languages: ${SUPPORTED_LANGUAGES:fr,en}
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:4200}
