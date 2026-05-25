@@ -43,6 +43,7 @@ public class DataSeeder implements CommandLineRunner {
             defaultSettings.put("SYSTEM_MAX_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxEntities()), "Maximum internal entities"});
             defaultSettings.put("SYSTEM_MAX_EXTERNAL_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxExternalEntities()), "Maximum external entities"});
             defaultSettings.put("SYSTEM_MAX_FILE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getMaxFileSize()), "Maximum upload size in KB"});
+            defaultSettings.put("SYSTEM_TABLE_PAGE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getTablePageSize()), "Default documents page size for lazy loading"});
             defaultSettings.put("CURRENCY", new String[]{appProperties.getSystem().getCurrency(), "System default currency symbol/code"});
             defaultSettings.put("DEFAULT_LANGUAGE", new String[]{appProperties.getSystem().getDefaultLanguage(), "Default system language"});
             defaultSettings.put("SUPPORTED_LANGUAGES", new String[]{String.join(",", appProperties.getSystem().getSupportedLanguages()), "Comma-separated list of supported languages"});

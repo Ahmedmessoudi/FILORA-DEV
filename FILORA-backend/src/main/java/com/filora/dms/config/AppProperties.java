@@ -22,53 +22,54 @@ public class AppProperties {
 
     @Getter @Setter
     public static class Jwt {
-        private String secret = "c29tZVN1cGVyU2VjcmV0S2V5VGhhdElzQXRMZWFzdDMyQnl0ZXNMb25n";
-        private int expiryMinutes = 60;
+        private String secret;
+        private int expiryMinutes;
     }
 
     @Getter @Setter
     public static class Security {
-        private boolean twoFactorEnabled = true;
-        private String twoFactorMethod = "EMAIL"; // EMAIL or TOTP
-        private int maxLoginAttempts = 5;
-        private int lockoutDurationMinutes = 15;
+        private boolean twoFactorEnabled;
+        private String twoFactorMethod; // EMAIL or TOTP
+        private int maxLoginAttempts;
+        private int lockoutDurationMinutes;
     }
 
     @Getter @Setter
     public static class Storage {
-        private String dataPath = "/app/dms-data/upload";
-        private String logsPath = "/app/logs";
+        private String dataPath;
+        private String logsPath;
     }
 
     @Getter @Setter
     public static class Ocr {
-        private String serviceUrl = "http://localhost:8000";
-        private double confidenceThreshold = 0.75;
+        private String serviceUrl;
+        private double confidenceThreshold;
     }
 
     @Getter @Setter
     public static class SystemSettings {
-        private String name = "FiloraDEV";
-        private boolean enabled = true;
-        private int maxUsers = 12;
-        private int maxEntities = 4;
-        private int maxExternalEntities = 4;
-        private int maxFileSize = 1024; // KB
-        private String currency = "TND";
-        private String defaultLanguage = "fr";
-        private List<String> supportedLanguages = List.of("fr", "en");
+        private String name;
+        private boolean enabled;
+        private int maxUsers;
+        private int maxEntities;
+        private int maxExternalEntities;
+        private int maxFileSize; // KB
+        private int tablePageSize;
+        private String currency;
+        private String defaultLanguage;
+        private List<String> supportedLanguages;
     }
 
     @Getter @Setter
     public static class Frontend {
-        private String url = "http://localhost:4200";
+        private String url;
     }
 
     @Getter @Setter
     public static class Mail {
-        private String host = "smtp.gmail.com";
-        private int port = 587;
-        private String username = "";
-        private String password = "";
+        private String host;
+        private int port;
+        private String username;
+        private String password;
     }
 }

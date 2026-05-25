@@ -95,7 +95,7 @@ html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
     overflow-x: hidden;
-    overflow-y: hidden; /* disable page scrolling - tables will scroll locally */
+    overflow-y: auto;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
 }

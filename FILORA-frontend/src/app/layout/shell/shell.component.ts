@@ -39,38 +39,42 @@ import { ToastContainerComponent } from '../../shared/components/toast-container
     .shell-layout {
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
     .shell-body {
       display: flex;
       flex: 1;
-      height: calc(100vh - var(--header-height));
+      min-height: calc(100vh - var(--header-height));
+      height: auto;
       margin-top: var(--header-height);
       position: relative;
-      min-height: 0;
+      overflow: visible;
     }
     .shell-content {
       flex: 1;
       margin-left: var(--sidebar-width);
-      height: 100%;
-      overflow: hidden; /* disable page scroll; inner components will scroll tables */
+      min-height: 100%;
+      height: auto;
+      overflow: visible;
       background-color: var(--bg-primary);
       transition: margin-left var(--transition-normal);
       display: flex;
       flex-direction: column;
-      min-height: 0;
     }
     .content-wrapper {
       padding: 24px;
-      /* allow children with flex:1 to shrink properly and enable internal scrolling */
-      min-height: 0;
+      min-height: 100%;
+      height: auto;
+      overflow: visible;
+      box-sizing: border-box;
       width: 100%;
       max-width: none;
       margin: 0;
       display: flex;
       flex-direction: column;
-      flex: 1; /* allow pages to stretch so tables can reach bottom */
+      flex: 1;
     }
 
     /* Mobile sidebar backdrop */

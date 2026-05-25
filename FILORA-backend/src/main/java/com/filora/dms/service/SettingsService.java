@@ -85,6 +85,9 @@ public class SettingsService {
             case "SYSTEM_MAX_FILE_SIZE":
                 appProperties.getSystem().setMaxFileSize(Integer.parseInt(value));
                 break;
+            case "SYSTEM_TABLE_PAGE_SIZE":
+                appProperties.getSystem().setTablePageSize(Integer.parseInt(value));
+                break;
             case "CURRENCY":
                 appProperties.getSystem().setCurrency(value);
                 break;

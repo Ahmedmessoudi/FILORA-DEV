@@ -9,6 +9,7 @@ import { EntityService } from '../../../core/services/entity.service';
 import { DocTypeService } from '../../../core/services/doctype.service';
 import { PartnerService, PartnerDto } from '../../../core/services/partner.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { SettingsService, AppSetting } from '../../../core/services/settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { UploadModalComponent } from '../../../shared/components/upload-modal/upload-modal.component';
 import { ShareModalComponent } from '../../../shared/components/share-modal/share-modal.component';
@@ -173,7 +174,7 @@ import JSZip from 'jszip';
 
       <!-- Main Documents Table Card -->
       <div class="card card-table glass-panel">
-        @if (loading()) {
+        @if (loading() && documents().length === 0) {
           <div class="loading-state">
             <div class="spinner"></div>
             <span>{{ 'dms.loading' | translate }}</span>
@@ -187,7 +188,7 @@ import JSZip from 'jszip';
             <p>Try refining your search query or uploading new files.</p>
           </div>
         } @else {
-          <div class="table-container">
+          <div class="table-container" (scroll)="onTableScroll($event)">
             <table class="data-table">
               <thead>
                 <tr>
@@ -202,9 +203,6 @@ import JSZip from 'jszip';
                     </label>
                   </th>
                   <th>{{ 'dms.file_name' | translate }}</th>
-                  @if (!doctypeId) {
-                    <th>DocType</th>
-                  }
                   <th>Partner</th>
                   <th>Invoice?</th>
                   <th>HT</th>
@@ -212,7 +210,6 @@ import JSZip from 'jszip';
                   <th>TTC</th>
                   <th>Doc Date</th>
                   <th>Due Date</th>
-                  <th>OCR Status</th>
                   <th>Owner</th>
                   <th style="width: 220px;" class="text-center">{{ 'dms.actions' | translate }}</th>
                 </tr>
@@ -241,9 +238,6 @@ import JSZip from 'jszip';
                         </div>
                       </div>
                     </td>
-                    @if (!doctypeId) {
-                      <td>{{ doc.docTypeName || '—' }}</td>
-                    }
                     <td>
                       @if (doc.partnerName) {
                         <span class="partner-text">{{ doc.partnerName }}</span>
@@ -282,11 +276,6 @@ import JSZip from 'jszip';
                     </td>
                     <td [class.facturable-cell]="doc.isInvoice">
                       {{ (doc.isInvoice && doc.dueDate ? (doc.dueDate | date:'mediumDate') : '') || '—' }}
-                    </td>
-                    <td>
-                      <span class="badge" [class]="getOcrBadgeClass(doc.ocrStatus)">
-                        {{ doc.ocrStatus }}
-                      </span>
                     </td>
                     <td><span class="user-badge">{{ doc.ownerName }}</span></td>
                     <td class="text-center">
@@ -343,6 +332,16 @@ import JSZip from 'jszip';
                     </td>
                   </tr>
                 }
+                @if (loadingMore()) {
+                  <tr class="loading-more-row">
+                    <td colspan="12" class="loading-more-cell">
+                      <div class="loading-more-content">
+                        <div class="spinner-xs"></div>
+                        <span>Loading more documents...</span>
+                      </div>
+                    </td>
+                  </tr>
+                }
               </tbody>
             </table>
           </div>
@@ -393,9 +392,10 @@ import JSZip from 'jszip';
       display: flex;
       flex-direction: column;
       gap: 12px;
-      height: 100%;
+      min-height: 100%;
+      height: auto;
       flex: 1;
-      min-height: 0;
+      overflow: visible;
     }
     .page-header {
       display: flex;
@@ -512,11 +512,50 @@ import JSZip from 'jszip';
       min-height: 0;
     }
 
+    .table-container .data-table th,
+    .table-container .data-table td {
+      padding: 6px 10px;
+      line-height: 1.1;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .table-container .data-table th {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    .table-container .data-table th,
+    .table-container .data-table td {
+      white-space: nowrap;
+    }
+
+    .file-name-cell {
+      min-width: max-content;
+    }
+
+    .loading-more-row td {
+      padding: 12px;
+      background: var(--bg-secondary);
+    }
+
+    .loading-more-cell {
+      text-align: center;
+    }
+
+    .loading-more-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
     .table-container .data-table thead th { position: sticky; top: 0; z-index: 6; background-color: var(--bg-secondary); }
     .file-name-cell {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       max-width: 350px;
     }
     .file-meta-wrapper {
@@ -542,13 +581,13 @@ import JSZip from 'jszip';
     .actions-group {
       display: flex;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
     }
     .action-btn {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 6px;
+      padding: 4px;
       border-radius: var(--radius-sm);
       color: var(--text-muted);
       transition: all var(--transition-fast);
@@ -756,6 +795,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   private readonly docTypeService = inject(DocTypeService);
   private readonly partnerService = inject(PartnerService);
   private readonly toastService = inject(ToastService);
+  private readonly settingsService = inject(SettingsService);
 
   companyId!: number;
   doctypeId!: number;
@@ -765,10 +805,15 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   documents = signal<DocumentDto[]>([]);
   partners = signal<PartnerDto[]>([]);
   loading = signal(true);
+  loadingMore = signal(false);
+  hasMoreDocuments = signal(true);
   compilingZip = signal(false);
 
   // Search parameters
   searchQuery = '';
+  private readonly pageSize = signal(50);
+  private settingsLoaded = false;
+  private currentPage = 0;
 
   // Interactive filters
   filtersVisible = signal(false);
@@ -878,8 +923,8 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
       this.doctypeId = Number(params.get('doctypeId'));
       this.selectedIds.set(new Set());
       this.resetFilters();
-      this.loadBreadcrumbs();
-      this.loadDocuments();
+      this.searchQuery = '';
+      this.initializePage();
     });
 
     // Close active dropdowns on global click
@@ -920,34 +965,97 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadDocuments() {
-    this.loading.set(true);
+  private initializePage() {
+    this.loadTablePageSize(() => {
+      this.loadBreadcrumbs();
+      this.loadDocuments(true);
+    });
+  }
+
+  private loadTablePageSize(onDone: () => void) {
+    if (this.settingsLoaded) {
+      onDone();
+      return;
+    }
+
+    this.settingsService.getAll().subscribe({
+      next: (res) => {
+        if (res.success) {
+          const settings = (res.data || []) as AppSetting[];
+          const pageSizeSetting = settings.find(setting => setting.key === 'SYSTEM_TABLE_PAGE_SIZE');
+          const parsed = Number(pageSizeSetting?.value);
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            this.pageSize.set(parsed);
+          }
+        }
+        this.settingsLoaded = true;
+        onDone();
+      },
+      error: () => {
+        this.settingsLoaded = true;
+        onDone();
+      }
+    });
+  }
+
+  loadDocuments(reset = false) {
+    const nextPage = reset ? 0 : this.currentPage;
+
+    if (reset) {
+      this.loading.set(true);
+      this.loadingMore.set(false);
+      this.hasMoreDocuments.set(true);
+      this.currentPage = 0;
+      this.documents.set([]);
+      this.selectedIds.set(new Set());
+    } else if (this.loading() || this.loadingMore() || !this.hasMoreDocuments()) {
+      return;
+    } else {
+      this.loadingMore.set(true);
+    }
+
     this.documentService.search({
       companyId: this.companyId,
       docTypeId: this.doctypeId ? this.doctypeId : undefined,
       query: this.searchQuery ? this.searchQuery : undefined,
-      size: 200 // larger page size for easier client side interactive filtering
+      page: nextPage,
+      size: this.pageSize()
     }).subscribe({
       next: (res) => {
         this.loading.set(false);
+        this.loadingMore.set(false);
         if (res.success) {
           // Check backend API structure: Page is returned inside res.data
           // Page contains "content" array
           const content = res.data?.content || [];
-          this.documents.set(content);
+          this.documents.update(current => reset ? content : [...current, ...content]);
+          this.currentPage = nextPage + 1;
+          const isLastPage = res.data?.last ?? content.length < this.pageSize();
+          this.hasMoreDocuments.set(!isLastPage && content.length > 0);
         } else {
           this.toastService.error('Error', res.message || 'Failed to search documents.');
         }
       },
       error: (err) => {
         this.loading.set(false);
+        this.loadingMore.set(false);
         this.toastService.error('Network Error', err.error?.message || 'Could not load documents.');
       }
     });
   }
 
   triggerBackendSearch() {
-    this.loadDocuments();
+    this.loadDocuments(true);
+  }
+
+  onTableScroll(event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const remaining = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (remaining < 250) {
+      this.loadDocuments(false);
+    }
   }
 
   // Row Selection logic
@@ -1012,7 +1120,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   // Modals Complete Triggers
   onUploadComplete() {
     this.showUploadModal.set(false);
-    this.loadDocuments();
+    this.loadDocuments(true);
   }
 
   openOcrReview(doc: DocumentDto) {
@@ -1022,7 +1130,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
 
   onOcrReviewComplete() {
     this.activeOcrReviewId.set(null);
-    this.loadDocuments();
+    this.loadDocuments(true);
   }
 
   openShareModal(doc: DocumentDto) {
@@ -1167,7 +1275,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
           if (res.success) {
             this.toastService.success('Deleted', 'Successfully deleted selected documents.');
             this.selectedIds.set(new Set());
-            this.loadDocuments();
+            this.loadDocuments(true);
           } else {
             this.toastService.error('Delete Failed', res.message || 'Could not delete documents.');
             this.loading.set(false);
@@ -1191,7 +1299,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
               next.delete(doc.id);
               return next;
             });
-            this.loadDocuments();
+            this.loadDocuments(true);
           } else {
             this.toastService.error('Delete Failed', res.message || 'Could not delete document.');
             this.loading.set(false);

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TempDocumentService, TempDocumentDto } from '../../../core/services/temp-document.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { SettingsService, AppSetting } from '../../../core/services/settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { UploadModalComponent } from '../../../shared/components/upload-modal/upload-modal.component';
 import { PromoteModalComponent } from '../../../shared/components/promote-modal/promote-modal.component';
@@ -68,7 +69,7 @@ import { catchError } from 'rxjs/operators';
 
       <!-- Main Documents Card -->
       <div class="card card-table glass-panel">
-        @if (loading()) {
+        @if (loading() && documents().length === 0) {
           <div class="loading-state">
             <div class="spinner"></div>
             <span>{{ 'dms.loading' | translate }}</span>
@@ -83,7 +84,7 @@ import { catchError } from 'rxjs/operators';
             <button class="btn btn-secondary btn-sm" (click)="showUploadModal.set(true)">Upload Now</button>
           </div>
         } @else {
-          <div class="table-container">
+          <div class="table-container" (scroll)="onTableScroll($event)">
             <table class="data-table">
               <thead>
                 <tr>
@@ -149,6 +150,16 @@ import { catchError } from 'rxjs/operators';
                     </td>
                   </tr>
                 }
+                @if (loadingMore()) {
+                  <tr class="loading-more-row">
+                    <td colspan="8" class="loading-more-cell">
+                      <div class="loading-more-content">
+                        <div class="spinner-xs"></div>
+                        <span>Loading more documents...</span>
+                      </div>
+                    </td>
+                  </tr>
+                }
               </tbody>
             </table>
           </div>
@@ -197,9 +208,10 @@ import { catchError } from 'rxjs/operators';
       display: flex;
       flex-direction: column;
       gap: 12px;
-      height: 100%;
+      min-height: 100%;
+      height: auto;
       flex: 1;
-      min-height: 0;
+      overflow: visible;
     }
     .page-header {
       display: flex;
@@ -270,11 +282,41 @@ import { catchError } from 'rxjs/operators';
       min-height: 0;
     }
 
+    .table-container .data-table th,
+    .table-container .data-table td {
+      padding: 6px 10px;
+      line-height: 1.1;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .table-container .data-table th {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    .loading-more-row td {
+      padding: 12px;
+      background: var(--bg-secondary);
+    }
+
+    .loading-more-cell {
+      text-align: center;
+    }
+
+    .loading-more-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
     .table-container .data-table thead th { position: sticky; top: 0; z-index: 6; background-color: var(--bg-secondary); }
     .file-name-cell {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       max-width: 320px;
     }
     .file-icon {
@@ -297,13 +339,13 @@ import { catchError } from 'rxjs/operators';
     .actions-group {
       display: flex;
       justify-content: center;
-      gap: 8px;
+      gap: 4px;
     }
     .action-btn {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 6px;
+      padding: 4px;
       border-radius: var(--radius-sm);
       color: var(--text-muted);
       transition: all var(--transition-fast);
@@ -455,10 +497,16 @@ import { catchError } from 'rxjs/operators';
 export class TempDocumentsComponent implements OnInit {
   private readonly tempDocService = inject(TempDocumentService);
   private readonly toastService = inject(ToastService);
+  private readonly settingsService = inject(SettingsService);
 
   documents = signal<TempDocumentDto[]>([]);
   loading = signal(true);
+  loadingMore = signal(false);
+  hasMoreDocuments = signal(true);
   searchQuery = '';
+  private readonly pageSize = signal(50);
+  private settingsLoaded = false;
+  private currentPage = 0;
 
   // Modals visibility triggers
   showUploadModal = signal(false);
@@ -502,16 +550,61 @@ export class TempDocumentsComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.loadDocuments();
+    this.loadTablePageSize(() => this.loadDocuments(true));
   }
 
-  loadDocuments() {
-    this.loading.set(true);
-    this.tempDocService.getTempDocuments().subscribe({
+  private loadTablePageSize(onDone: () => void) {
+    if (this.settingsLoaded) {
+      onDone();
+      return;
+    }
+
+    this.settingsService.getAll().subscribe({
+      next: (res) => {
+        if (res.success) {
+          const settings = (res.data || []) as AppSetting[];
+          const pageSizeSetting = settings.find(setting => setting.key === 'SYSTEM_TABLE_PAGE_SIZE');
+          const parsed = Number(pageSizeSetting?.value);
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            this.pageSize.set(parsed);
+          }
+        }
+        this.settingsLoaded = true;
+        onDone();
+      },
+      error: () => {
+        this.settingsLoaded = true;
+        onDone();
+      }
+    });
+  }
+
+  loadDocuments(reset = false) {
+    const nextPage = reset ? 0 : this.currentPage;
+
+    if (reset) {
+      this.loading.set(true);
+      this.loadingMore.set(false);
+      this.hasMoreDocuments.set(true);
+      this.currentPage = 0;
+      this.documents.set([]);
+      this.selectedIds.set(new Set());
+    } else if (this.loading() || this.loadingMore() || !this.hasMoreDocuments()) {
+      return;
+    } else {
+      this.loadingMore.set(true);
+    }
+
+    this.tempDocService.getTempDocuments(nextPage, this.pageSize()).subscribe({
       next: (res) => {
         this.loading.set(false);
+        this.loadingMore.set(false);
         if (res.success) {
-          this.documents.set(res.data || []);
+          const content = res.data?.content || [];
+          this.documents.update(current => reset ? content : [...current, ...content]);
+          this.currentPage = nextPage + 1;
+          const isLastPage = res.data?.last ?? content.length < this.pageSize();
+          this.hasMoreDocuments.set(!isLastPage && content.length > 0);
           // Clear selections that might no longer exist
           const existingIds = new Set(this.documents().map(d => d.id));
           this.selectedIds.update(current => {
@@ -527,9 +620,20 @@ export class TempDocumentsComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
+        this.loadingMore.set(false);
         this.toastService.error('Network Error', err.error?.message || 'Could not load temporary files.');
       }
     });
+  }
+
+  onTableScroll(event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const remaining = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (remaining < 250) {
+      this.loadDocuments(false);
+    }
   }
 
   formatSize(bytes: number): string {
@@ -589,7 +693,7 @@ export class TempDocumentsComponent implements OnInit {
     });
 
     // Refresh temp list
-    this.loadDocuments();
+    this.loadDocuments(true);
 
     // If backend returned promoted document id, open OCR review modal
     if (promotedId) {
@@ -601,12 +705,12 @@ export class TempDocumentsComponent implements OnInit {
 
   onUploadComplete() {
     this.showUploadModal.set(false);
-    this.loadDocuments();
+    this.loadDocuments(true);
   }
 
   onOcrReviewComplete() {
     this.activeOcrReviewId.set(null);
-    this.loadDocuments();
+    this.loadDocuments(true);
   }
 
   // Deletion logic
@@ -654,11 +758,11 @@ export class TempDocumentsComponent implements OnInit {
             );
           }
           this.selectedIds.set(new Set());
-          this.loadDocuments();
+          this.loadDocuments(true);
         },
         error: () => {
           this.toastService.error('Error', 'Bulk deletion process failed.');
-          this.loadDocuments();
+          this.loadDocuments(true);
         }
       });
     } else {
@@ -674,7 +778,7 @@ export class TempDocumentsComponent implements OnInit {
               next.delete(doc.id);
               return next;
             });
-            this.loadDocuments();
+            this.loadDocuments(true);
           } else {
             this.toastService.error('Delete Failed', res.message || 'Could not delete temporary document.');
             this.loading.set(false);

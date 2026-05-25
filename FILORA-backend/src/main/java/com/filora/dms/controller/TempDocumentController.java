@@ -10,14 +10,16 @@ import com.filora.dms.repository.UserRepository;
 import com.filora.dms.service.TempDocumentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.security.Principal;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/temp-documents")
@@ -28,12 +30,14 @@ public class TempDocumentController {
     private final UserRepository userRepository;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TempDocumentDto>>> getMyTempDocuments(Principal principal) {
+    public ResponseEntity<ApiResponse<Page<TempDocumentDto>>> getMyTempDocuments(
+            Principal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         User currentUser = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new IllegalArgumentException("Current user not found"));
-        List<TempDocumentDto> docs = tempDocumentService.getTempDocumentsByUser(currentUser).stream()
-                .map(TempDocumentDto::fromEntity)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<TempDocumentDto> docs = tempDocumentService.getTempDocumentsByUser(currentUser, pageable).map(TempDocumentDto::fromEntity);
         return ResponseEntity.ok(ApiResponse.success("Temp documents retrieved successfully", docs));
     }
 

@@ -143,6 +143,13 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
                            [(ngModel)]="config.SYSTEM_MAX_FILE_SIZE" required min="100">
                     <span class="field-info">Files larger than this limit are blocked during client uploads.</span>
                   </div>
+
+                  <div class="form-group col-6">
+                    <label class="form-label" for="table-page-size">Documents Table Page Size</label>
+                    <input type="number" id="table-page-size" class="form-control" name="SYSTEM_TABLE_PAGE_SIZE"
+                           [(ngModel)]="config.SYSTEM_TABLE_PAGE_SIZE" required min="10" max="200">
+                    <span class="field-info">Controls how many documents are fetched per lazy-loaded batch in tables.</span>
+                  </div>
                 </div>
 
                 <div class="form-row">
@@ -401,6 +408,7 @@ export class SettingsComponent implements OnInit {
     SYSTEM_MAX_ENTITIES: '4',
     SYSTEM_MAX_EXTERNAL_ENTITIES: '4',
     SYSTEM_MAX_FILE_SIZE: '1024',
+    SYSTEM_TABLE_PAGE_SIZE: '50',
     CURRENCY: 'TND',
     DEFAULT_LANGUAGE: 'fr',
     TWO_FACTOR_ENABLED: 'false',

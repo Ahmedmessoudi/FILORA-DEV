@@ -19,8 +19,13 @@ export class TempDocumentService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/temp-documents';
 
-  getTempDocuments(): Observable<any> {
-    return this.http.get<any>(this.apiUrl);
+  getTempDocuments(page = 0, size = 20): Observable<any> {
+    return this.http.get<any>(this.apiUrl, {
+      params: {
+        page: page.toString(),
+        size: size.toString()
+      }
+    });
   }
 
   upload(file: File): Observable<any> {
