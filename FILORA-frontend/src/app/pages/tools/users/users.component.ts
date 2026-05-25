@@ -39,19 +39,62 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Username</th>
-                  <th>Full Name</th>
-                  <th>Email</th>
-                  <th>Companies</th>
-                  <th>Role</th>
-                  <th>Language</th>
-                  <th>2FA Status</th>
-                  <th>Status</th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('username')"><span>Username</span><span class="table-sort-icons">{{ sortColumn === 'username' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('surname')"><span>Full Name</span><span class="table-sort-icons">{{ sortColumn === 'surname' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('email')"><span>Email</span><span class="table-sort-icons">{{ sortColumn === 'email' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('companies')"><span>Companies</span><span class="table-sort-icons">{{ sortColumn === 'companies' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('role')"><span>Role</span><span class="table-sort-icons">{{ sortColumn === 'role' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('language')"><span>Language</span><span class="table-sort-icons">{{ sortColumn === 'language' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('twoFa')"><span>2FA Status</span><span class="table-sort-icons">{{ sortColumn === 'twoFa' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('status')"><span>Status</span><span class="table-sort-icons">{{ sortColumn === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
                   <th style="width: 200px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterUsername" placeholder="Search username"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterFullName" placeholder="Search name"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterEmail" placeholder="Search email"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterCompany">
+                      <option value="ALL">All entities</option>
+                      @for (company of companyOptions(); track company.id) {
+                        <option [value]="company.id">{{ company.name }}</option>
+                      }
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterRole">
+                      <option value="ALL">All roles</option>
+                      <option value="user">USER</option>
+                      <option value="admin">ADMIN</option>
+                      <option value="superuser">SUPERUSER</option>
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterLanguage">
+                      <option value="ALL">All languages</option>
+                      <option value="fr">FR</option>
+                      <option value="en">EN</option>
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterTwoFa">
+                      <option value="ALL">All</option>
+                      <option value="ENABLED">Enabled</option>
+                      <option value="DISABLED">Disabled</option>
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterStatus">
+                      <option value="ALL">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                @for (user of users(); track user.id) {
+                @for (user of displayedUsers(); track user.id) {
                   <tr>
                     <td class="text-bold">{{ user.username }}</td>
                     <td>{{ user.surname }}</td>
@@ -294,6 +337,55 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
       width: 100%;
       overflow-x: auto;
     }
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .table-container .data-table th,
+    .table-container .data-table td {
+      padding: 5px 8px;
+      line-height: 1.05;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .table-container .data-table th {
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+    .table-filter-row th {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    .table-filter-input,
+    .table-filter-select {
+      padding: 4px 6px;
+      min-height: 30px;
+      font-size: 0.75rem;
+    }
+    .table-container .data-table th:nth-child(1),
+    .table-container .data-table td:nth-child(1) {
+      width: 120px;
+    }
+    .table-container .data-table th:nth-child(2),
+    .table-container .data-table td:nth-child(2) {
+      width: 120px;
+    }
+    .table-container .data-table th:nth-child(3),
+    .table-container .data-table td:nth-child(3) {
+      width: 240px;
+      white-space: normal;
+      word-break: break-word;
+      overflow: visible;
+      text-overflow: clip;
+    }
+    .table-container .data-table th:nth-child(4),
+    .table-container .data-table td:nth-child(4) {
+      width: 180px;
+    }
+    .table-container .data-table th:nth-child(9),
+    .table-container .data-table td:nth-child(9) {
+      width: 180px;
+    }
     .lang-badge {
       background-color: var(--bg-primary);
       padding: 2px 6px;
@@ -320,7 +412,8 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .actions-group {
       display: flex;
       justify-content: center;
-      gap: 8px;
+      gap: 4px;
+      flex-wrap: wrap;
     }
     .action-btn {
       background: none;
@@ -551,6 +644,86 @@ export class UsersComponent implements OnInit {
   companies = signal<EntityDto[]>([]);
   loading = signal(true);
   saving = signal(false);
+  sortColumn: 'username' | 'surname' | 'email' | 'companies' | 'role' | 'language' | 'twoFa' | 'status' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  filterUsername = '';
+  filterFullName = '';
+  filterEmail = '';
+  filterCompany = 'ALL';
+  filterRole = 'ALL';
+  filterLanguage = 'ALL';
+  filterTwoFa = 'ALL';
+  filterStatus = 'ALL';
+
+  companyOptions = computed(() => [...this.companies()].sort((left, right) => left.name.localeCompare(right.name)));
+
+  displayedUsers = computed(() => {
+    const usernameQuery = this.filterUsername.trim().toLowerCase();
+    const fullNameQuery = this.filterFullName.trim().toLowerCase();
+    const emailQuery = this.filterEmail.trim().toLowerCase();
+    const companyFilter = this.filterCompany;
+    const roleFilter = this.filterRole;
+    const languageFilter = this.filterLanguage;
+    const twoFaFilter = this.filterTwoFa;
+    const statusFilter = this.filterStatus;
+
+    const filtered = this.users().filter(user => {
+      if (usernameQuery && !user.username.toLowerCase().includes(usernameQuery)) return false;
+      if (fullNameQuery && !(user.surname || '').toLowerCase().includes(fullNameQuery)) return false;
+      if (emailQuery && !user.email.toLowerCase().includes(emailQuery)) return false;
+      if (companyFilter !== 'ALL' && !user.assignedCompanyIds.includes(Number(companyFilter))) return false;
+      if (roleFilter !== 'ALL' && user.role !== roleFilter) return false;
+      if (languageFilter !== 'ALL' && user.language !== languageFilter) return false;
+      if (twoFaFilter !== 'ALL') {
+        const enabled = twoFaFilter === 'ENABLED';
+        if (user.twoFaEnabled !== enabled) return false;
+      }
+      if (statusFilter !== 'ALL') {
+        const active = statusFilter === 'ACTIVE';
+        if (user.isActive !== active) return false;
+      }
+      return true;
+    });
+
+    if (!this.sortColumn) {
+      return filtered;
+    }
+
+    return [...filtered].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      switch (this.sortColumn) {
+        case 'surname':
+          comparison = (left.surname || '').localeCompare(right.surname || '');
+          break;
+        case 'email':
+          comparison = left.email.localeCompare(right.email);
+          break;
+        case 'companies':
+          comparison = left.assignedCompanyIds.join(',').localeCompare(right.assignedCompanyIds.join(','));
+          break;
+        case 'role':
+          comparison = left.role.localeCompare(right.role);
+          break;
+        case 'language':
+          comparison = left.language.localeCompare(right.language);
+          break;
+        case 'twoFa':
+          comparison = Number(left.twoFaEnabled) - Number(right.twoFaEnabled);
+          break;
+        case 'status':
+          comparison = Number(left.isActive) - Number(right.isActive);
+          break;
+        case 'username':
+        default:
+          comparison = left.username.localeCompare(right.username);
+          break;
+      }
+
+      return comparison * direction;
+    });
+  });
 
   // Form handling
   formOpen = signal(false);
@@ -620,13 +793,14 @@ export class UsersComponent implements OnInit {
 
   toggleActive(user: UserDto) {
     if (!user.id) return;
+    const wasActive = !!user.isActive;
     this.userService.toggleActive(user.id).subscribe({
       next: (res) => {
         if (res.success) {
-          user.isActive = !user.isActive;
+          this.loadData();
           this.toastService.success(
             'User Updated', 
-            `User "${user.username}" status updated to ${user.isActive ? 'Active' : 'Inactive'}.`
+            `User "${user.username}" has been ${wasActive ? 'deactivated' : 'activated'}.`
           );
         } else {
           this.toastService.error('Error', res.message || 'Failed to toggle user status.');
@@ -779,5 +953,21 @@ export class UsersComponent implements OnInit {
   cancelDelete() {
     this.showConfirmDeleteDialog.set(false);
     this.selectedUser.set(null);
+  }
+
+  toggleSort(column: 'username' | 'surname' | 'email' | 'companies' | 'role' | 'language' | 'twoFa' | 'status') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 }

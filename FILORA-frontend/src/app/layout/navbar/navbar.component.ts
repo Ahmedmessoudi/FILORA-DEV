@@ -49,16 +49,51 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
               <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M480-360 280-560h400L480-360Z"/></svg>
             </button>
             @if (showTools()) {
-              <div class="dropdown-menu glass-panel" (mouseleave)="showTools.set(false)">
-                <a routerLink="/tools/users" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.users' | translate }}</a>
-                <a routerLink="/tools/entities" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.entities' | translate }}</a>
-                <a routerLink="/tools/doctypes" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.doctypes' | translate }}</a>
-                <a routerLink="/tools/partners" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.partners' | translate }}</a>
-                <a routerLink="/tools/partner-types" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.partnertypes' | translate }}</a>
-                @if (authService.isSuperuser()) {
-                  <hr class="dropdown-divider">
-                  <a routerLink="/settings" class="dropdown-item setting-link" (click)="showTools.set(false)">{{ 'nav.settings' | translate }}</a>
-                }
+              <div class="dropdown-menu tools-dropdown-menu" (mouseleave)="showTools.set(false)">
+                <div class="tools-dropdown-grid">
+                  <section class="tools-column">
+                    <div class="tools-column-header">
+                      <span class="tools-column-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor">
+                          <path d="M480-520q-33 0-56.5-23.5T400-600q0-33 23.5-56.5T480-680q33 0 56.5 23.5T560-600q0 33-23.5 56.5T480-520Zm0 360q-83 0-156-31.5T197-277q-54-54-85.5-127T80-560q0-83 31.5-156T197-843q54-54 127-85.5T480-960q83 0 156 31.5T763-843q54 54 85.5 127T880-560q0 83-31.5 156T763-277q-54 54-127 85.5T480-160Z"/>
+                        </svg>
+                      </span>
+                      <h4>Users & Entities</h4>
+                    </div>
+                    <a routerLink="/tools/users" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.users' | translate }}</a>
+                    <a routerLink="/tools/entities" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.entities' | translate }}</a>
+                  </section>
+
+                  <section class="tools-column">
+                    <div class="tools-column-header">
+                      <span class="tools-column-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor">
+                          <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h360l200 200v440q0 33-23.5 56.5T680-120H200Zm300-480v-160H200v560h480v-400H500Zm-180 240h240v-80H320v80Zm0-160h240v-80H320v80Z"/>
+                        </svg>
+                      </span>
+                      <h4>Documents & Partners</h4>
+                    </div>
+                    <a routerLink="/tools/doctypes" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.doctypes' | translate }}</a>
+                    <a routerLink="/tools/partners" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.partners' | translate }}</a>
+                    <a routerLink="/tools/partner-types" class="dropdown-item" (click)="showTools.set(false)">{{ 'nav.partnertypes' | translate }}</a>
+                  </section>
+
+                  <section class="tools-column">
+                    <div class="tools-column-header">
+                      <span class="tools-column-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor">
+                          <path d="M480-120q-33 0-56.5-23.5T400-200v-80H240q-33 0-56.5-23.5T160-360v-240q0-33 23.5-56.5T240-680h80v-80q0-33 23.5-56.5T400-840h160q33 0 56.5 23.5T640-760v80h80q33 0 56.5 23.5T800-600v240q0 33-23.5 56.5T720-280H560v80q0 33-23.5 56.5T480-120Zm-80-160h160v-80h160v-240H560v-80H400v80H240v240h160v80Zm80-240q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520Z"/>
+                        </svg>
+                      </span>
+                      <h4>System</h4>
+                    </div>
+                    @if (authService.isSuperuser()) {
+                      <a routerLink="/settings" class="dropdown-item setting-link" (click)="showTools.set(false)">{{ 'nav.settings' | translate }}</a>
+                    } @else {
+                      <span class="tools-note">Superuser only</span>
+                    }
+                  </section>
+                </div>
               </div>
             }
           </div>
@@ -181,7 +216,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       position: absolute;
       top: calc(100% + 8px);
       right: 0;
-      min-width: 200px;
+      min-width: 220px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-color);
       box-shadow: var(--shadow-lg);
@@ -190,9 +225,57 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       flex-direction: column;
       animation: dropdown-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .tools-dropdown-menu {
+      width: min(720px, calc(100vw - 32px));
+      min-width: 640px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .tools-dropdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .tools-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+    }
+    .tools-column-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding-bottom: 6px;
+      margin-bottom: 2px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .tools-column-header h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .tools-column-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      color: var(--primary);
+      flex-shrink: 0;
+    }
     .dropdown-item {
-      padding: 10px 16px;
-      font-size: 0.925rem;
+      padding: 8px 10px;
+      font-size: 0.9rem;
       color: var(--text-secondary);
       cursor: pointer;
       display: flex;
@@ -200,6 +283,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       gap: 10px;
       text-align: left;
       transition: all var(--transition-fast);
+      border-radius: var(--radius-sm);
     }
     .dropdown-item:hover {
       background-color: var(--primary-light);
@@ -212,6 +296,11 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
     }
     .setting-link {
       font-weight: 500;
+    }
+    .tools-note {
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
     }
     .profile-trigger {
       display: flex;
@@ -287,6 +376,13 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       }
       .navbar {
         padding: 0 16px;
+      }
+      .tools-dropdown-menu {
+        width: calc(100vw - 32px);
+        min-width: 0;
+      }
+      .tools-dropdown-grid {
+        grid-template-columns: 1fr;
       }
     }
   `]

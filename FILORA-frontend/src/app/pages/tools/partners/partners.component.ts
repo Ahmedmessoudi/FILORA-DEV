@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -40,17 +40,46 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Company</th>
-                  <th>Identifiers</th>
-                  <th>Contact</th>
-                  <th>Partner Types</th>
-                  <th>Assigned Entities</th>
-                  <th>Status</th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('companyName')"><span>Company</span><span class="table-sort-icons">{{ sortColumn === 'companyName' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('identifiers')"><span>Identifiers</span><span class="table-sort-icons">{{ sortColumn === 'identifiers' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('contact')"><span>Contact</span><span class="table-sort-icons">{{ sortColumn === 'contact' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('partnerTypes')"><span>Partner Types</span><span class="table-sort-icons">{{ sortColumn === 'partnerTypes' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('assignedEntities')"><span>Assigned Entities</span><span class="table-sort-icons">{{ sortColumn === 'assignedEntities' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('status')"><span>Status</span><span class="table-sort-icons">{{ sortColumn === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
                   <th style="width: 150px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterCompany" placeholder="Search company"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterIdentifier" placeholder="Search ID"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterContact" placeholder="Search contact"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterPartnerType">
+                      <option value="ALL">All types</option>
+                      @for (type of partnerTypeOptions(); track type.id) {
+                        <option [value]="type.id">{{ type.name }}</option>
+                      }
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterCompanyId">
+                      <option value="ALL">All entities</option>
+                      @for (company of companyOptions(); track company.id) {
+                        <option [value]="company.id">{{ company.name }}</option>
+                      }
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterStatus">
+                      <option value="ALL">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                @for (partner of partners(); track partner.id) {
+                @for (partner of displayedPartners(); track partner.id) {
                   <tr>
                     <td class="text-bold">
                       <div>{{ partner.companyName }}</div>
@@ -336,11 +365,30 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .card-table {
       padding: 0;
       overflow: hidden;
+      min-width: 0;
     }
     .table-container {
       width: 100%;
       overflow-x: auto;
+      min-width: 0;
     }
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .table-container .data-table th,
+    .table-container .data-table td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .table-container .data-table th:nth-child(1), .table-container .data-table td:nth-child(1) { width: 180px; }
+    .table-container .data-table th:nth-child(2), .table-container .data-table td:nth-child(2) { width: 150px; }
+    .table-container .data-table th:nth-child(3), .table-container .data-table td:nth-child(3) { width: 220px; }
+    .table-container .data-table th:nth-child(4), .table-container .data-table td:nth-child(4) { width: 190px; }
+    .table-container .data-table th:nth-child(5), .table-container .data-table td:nth-child(5) { width: 190px; }
+    .table-container .data-table th:nth-child(6), .table-container .data-table td:nth-child(6) { width: 110px; }
+    .table-container .data-table th:nth-child(7), .table-container .data-table td:nth-child(7) { width: 150px; }
     .status-toggle-btn {
       background-color: var(--error-light);
       color: var(--error);
@@ -610,6 +658,74 @@ export class PartnersComponent implements OnInit {
   companies = signal<EntityDto[]>([]);
   loading = signal(true);
   saving = signal(false);
+  sortColumn: 'companyName' | 'identifiers' | 'contact' | 'partnerTypes' | 'assignedEntities' | 'status' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  filterCompany = '';
+  filterIdentifier = '';
+  filterContact = '';
+  filterPartnerType = 'ALL';
+  filterCompanyId = 'ALL';
+  filterStatus = 'ALL';
+
+  partnerTypeOptions = computed(() => [...this.partnerTypes()].sort((left, right) => left.name.localeCompare(right.name)));
+  companyOptions = computed(() => [...this.companies()].sort((left, right) => left.name.localeCompare(right.name)));
+
+  displayedPartners = computed(() => {
+    const companyQuery = this.filterCompany.trim().toLowerCase();
+    const identifierQuery = this.filterIdentifier.trim().toLowerCase();
+    const contactQuery = this.filterContact.trim().toLowerCase();
+    const partnerTypeFilter = this.filterPartnerType;
+    const companyIdFilter = this.filterCompanyId;
+    const statusFilter = this.filterStatus;
+
+    const filtered = this.partners().filter(partner => {
+      if (companyQuery && !partner.companyName.toLowerCase().includes(companyQuery) && !(partner.tradeName || '').toLowerCase().includes(companyQuery)) return false;
+      if (identifierQuery && !partner.uniqueIdentifier.toLowerCase().includes(identifierQuery)) return false;
+      if (contactQuery) {
+        const contactValue = [partner.email, partner.phone1, partner.phone2, partner.phone3].filter(Boolean).join(' ').toLowerCase();
+        if (!contactValue.includes(contactQuery)) return false;
+      }
+      if (partnerTypeFilter !== 'ALL' && !partner.partnerTypeIds.includes(Number(partnerTypeFilter))) return false;
+      if (companyIdFilter !== 'ALL' && !partner.assignedCompanyIds.includes(Number(companyIdFilter))) return false;
+      if (statusFilter !== 'ALL') {
+        const active = statusFilter === 'ACTIVE';
+        if (partner.isActive !== active) return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      switch (this.sortColumn) {
+        case 'identifiers':
+          comparison = left.uniqueIdentifier.localeCompare(right.uniqueIdentifier);
+          break;
+        case 'contact': {
+          const leftContact = [left.email, left.phone1, left.phone2, left.phone3].filter(Boolean).join(' ');
+          const rightContact = [right.email, right.phone1, right.phone2, right.phone3].filter(Boolean).join(' ');
+          comparison = leftContact.localeCompare(rightContact);
+          break;
+        }
+        case 'partnerTypes':
+          comparison = left.partnerTypeIds.join(',').localeCompare(right.partnerTypeIds.join(','));
+          break;
+        case 'assignedEntities':
+          comparison = left.assignedCompanyIds.join(',').localeCompare(right.assignedCompanyIds.join(','));
+          break;
+        case 'status':
+          comparison = Number(left.isActive) - Number(right.isActive);
+          break;
+        case 'companyName':
+        default:
+          comparison = left.companyName.localeCompare(right.companyName);
+          break;
+      }
+
+      return comparison * direction;
+    });
+  });
 
   // Form handling
   formOpen = signal(false);
@@ -829,5 +945,21 @@ export class PartnersComponent implements OnInit {
   cancelDelete() {
     this.showConfirmDeleteDialog.set(false);
     this.selectedPartner.set(null);
+  }
+
+  toggleSort(column: 'companyName' | 'identifiers' | 'contact' | 'partnerTypes' | 'assignedEntities' | 'status') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 }

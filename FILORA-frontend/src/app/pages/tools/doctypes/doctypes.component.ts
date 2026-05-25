@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -39,14 +39,26 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 80px;">ID</th>
-                  <th>Name</th>
-                  <th>Status</th>
+                  <th style="width: 80px;"><button type="button" class="table-sort-button" (click)="toggleSort('id')"><span>ID</span><span class="table-sort-icons">{{ sortColumn === 'id' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('name')"><span>Name</span><span class="table-sort-icons">{{ sortColumn === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('status')"><span>Status</span><span class="table-sort-icons">{{ sortColumn === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
                   <th style="width: 150px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterId" placeholder="Search ID"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterName" placeholder="Search name"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterStatus">
+                      <option value="ALL">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                @for (docType of docTypes(); track docType.id) {
+                @for (docType of displayedDocTypes(); track docType.id) {
                   <tr>
                     <td class="text-muted">#{{ docType.id }}</td>
                     <td class="text-bold">{{ docType.name }}</td>
@@ -194,6 +206,31 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
       width: 100%;
       overflow-x: auto;
     }
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .table-container .data-table th,
+    .table-container .data-table td {
+      padding: 5px 8px;
+      line-height: 1.05;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .table-container .data-table th {
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+    .table-filter-row th {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    .table-filter-input,
+    .table-filter-select {
+      padding: 4px 6px;
+      min-height: 30px;
+      font-size: 0.75rem;
+    }
     .status-toggle-btn {
       background-color: var(--error-light);
       color: var(--error);
@@ -212,7 +249,8 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .actions-group {
       display: flex;
       justify-content: center;
-      gap: 8px;
+      gap: 4px;
+      flex-wrap: wrap;
     }
     .action-btn {
       background: none;
@@ -419,6 +457,46 @@ export class DocTypesComponent implements OnInit {
   companies = signal<EntityDto[]>([]);
   loading = signal(true);
   saving = signal(false);
+  sortColumn: 'id' | 'name' | 'status' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  filterId = '';
+  filterName = '';
+  filterStatus = 'ALL';
+
+  displayedDocTypes = computed(() => {
+    const idQuery = this.filterId.trim().toLowerCase();
+    const nameQuery = this.filterName.trim().toLowerCase();
+    const statusFilter = this.filterStatus;
+
+    const filtered = this.docTypes().filter(docType => {
+      if (idQuery && !String(docType.id ?? '').toLowerCase().includes(idQuery)) return false;
+      if (nameQuery && !docType.name.toLowerCase().includes(nameQuery)) return false;
+      if (statusFilter !== 'ALL') {
+        const active = statusFilter === 'ACTIVE';
+        if (docType.status !== active) return false;
+      }
+      return true;
+    });
+
+    if (!this.sortColumn) {
+      return filtered;
+    }
+
+    return [...filtered].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      if (this.sortColumn === 'id') {
+        comparison = (left.id ?? 0) - (right.id ?? 0);
+      } else if (this.sortColumn === 'status') {
+        comparison = Number(left.status) - Number(right.status);
+      } else {
+        comparison = left.name.localeCompare(right.name);
+      }
+
+      return comparison * direction;
+    });
+  });
 
   // Form handling
   formOpen = signal(false);
@@ -643,5 +721,21 @@ export class DocTypesComponent implements OnInit {
   cancelDelete() {
     this.showConfirmDeleteDialog.set(false);
     this.selectedDocType.set(null);
+  }
+
+  toggleSort(column: 'id' | 'name' | 'status') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 }

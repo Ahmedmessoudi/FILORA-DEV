@@ -32,35 +32,35 @@ public class DataSeeder implements CommandLineRunner {
         
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-        // 1. Seed Default Settings if table is empty
-        if (appSettingRepository.count() == 0) {
-            log.info("Seeding application settings...");
-            
-            Map<String, String[]> defaultSettings = new HashMap<>();
-            defaultSettings.put("SYSTEM_NAME", new String[]{appProperties.getSystem().getName(), "System instance name"});
-            defaultSettings.put("SYSTEM_ENABLED", new String[]{String.valueOf(appProperties.getSystem().isEnabled()), "Whether the system is active"});
-            defaultSettings.put("SYSTEM_MAX_USERS", new String[]{String.valueOf(appProperties.getSystem().getMaxUsers()), "Maximum allowable active users"});
-            defaultSettings.put("SYSTEM_MAX_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxEntities()), "Maximum internal entities"});
-            defaultSettings.put("SYSTEM_MAX_EXTERNAL_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxExternalEntities()), "Maximum external entities"});
-            defaultSettings.put("SYSTEM_MAX_FILE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getMaxFileSize()), "Maximum upload size in KB"});
-            defaultSettings.put("SYSTEM_TABLE_PAGE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getTablePageSize()), "Default documents page size for lazy loading"});
-            defaultSettings.put("CURRENCY", new String[]{appProperties.getSystem().getCurrency(), "System default currency symbol/code"});
-            defaultSettings.put("DEFAULT_LANGUAGE", new String[]{appProperties.getSystem().getDefaultLanguage(), "Default system language"});
-            defaultSettings.put("SUPPORTED_LANGUAGES", new String[]{String.join(",", appProperties.getSystem().getSupportedLanguages()), "Comma-separated list of supported languages"});
-            defaultSettings.put("TWO_FACTOR_ENABLED", new String[]{String.valueOf(appProperties.getSecurity().isTwoFactorEnabled()), "Whether two-factor authentication is globally enabled"});
-            defaultSettings.put("TWO_FACTOR_METHOD", new String[]{appProperties.getSecurity().getTwoFactorMethod(), "Default 2FA method (EMAIL or TOTP)"});
+        // 1. Seed or repair default settings
+        log.info("Seeding application settings...");
 
-            for (Map.Entry<String, String[]> entry : defaultSettings.entrySet()) {
-                AppSetting setting = AppSetting.builder()
-                        .key(entry.getKey())
-                        .value(entry.getValue()[0])
-                        .description(entry.getValue()[1])
-                        .updatedAt(Instant.now())
-                        .build();
-                appSettingRepository.save(setting);
+        Map<String, String[]> defaultSettings = new HashMap<>();
+        defaultSettings.put("SYSTEM_NAME", new String[]{appProperties.getSystem().getName(), "System instance name"});
+        defaultSettings.put("SYSTEM_ENABLED", new String[]{String.valueOf(appProperties.getSystem().isEnabled()), "Whether the system is active"});
+        defaultSettings.put("SYSTEM_MAX_USERS", new String[]{String.valueOf(appProperties.getSystem().getMaxUsers()), "Maximum allowable active users"});
+        defaultSettings.put("SYSTEM_MAX_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxEntities()), "Maximum internal entities"});
+        defaultSettings.put("SYSTEM_MAX_EXTERNAL_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxExternalEntities()), "Maximum external entities"});
+        defaultSettings.put("SYSTEM_MAX_FILE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getMaxFileSize()), "Maximum upload size in KB"});
+        defaultSettings.put("SYSTEM_TABLE_PAGE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getTablePageSize()), "Default documents page size for lazy loading"});
+        defaultSettings.put("CURRENCY", new String[]{appProperties.getSystem().getCurrency(), "System default currency symbol/code"});
+        defaultSettings.put("DEFAULT_LANGUAGE", new String[]{appProperties.getSystem().getDefaultLanguage(), "Default system language"});
+        defaultSettings.put("SUPPORTED_LANGUAGES", new String[]{String.join(",", appProperties.getSystem().getSupportedLanguages()), "Comma-separated list of supported languages"});
+        defaultSettings.put("TWO_FACTOR_ENABLED", new String[]{String.valueOf(appProperties.getSecurity().isTwoFactorEnabled()), "Whether two-factor authentication is globally enabled"});
+        defaultSettings.put("TWO_FACTOR_METHOD", new String[]{appProperties.getSecurity().getTwoFactorMethod(), "Default 2FA method (EMAIL or TOTP)"});
+
+        for (Map.Entry<String, String[]> entry : defaultSettings.entrySet()) {
+            AppSetting setting = appSettingRepository.findById(entry.getKey())
+                    .orElseGet(() -> AppSetting.builder().key(entry.getKey()).build());
+
+            setting.setValue(entry.getValue()[0]);
+            if (setting.getDescription() == null || setting.getDescription().isBlank()) {
+                setting.setDescription(entry.getValue()[1]);
             }
-            log.info("Successfully seeded application settings.");
+            setting.setUpdatedAt(Instant.now());
+            appSettingRepository.save(setting);
         }
+        log.info("Successfully seeded or repaired application settings.");
 
         // 2. Seed Default Users if table is empty
         if (userRepository.count() == 0) {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PartnerTypeService, PartnerTypeDto } from '../../../core/services/partner-type.service';
@@ -37,14 +37,95 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width: 80px;">ID</th>
-                  <th>Name</th>
-                  <th>Status</th>
+                  <th style="width: 80px;">
+                    <button type="button" class="table-sort-button" (click)="toggleSort('id')">
+                      <span>ID</span>
+                      <span class="table-sort-icons">
+                        @if (sortColumn === 'id') {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            @if (sortDirection === 'asc') {
+                              <path d="M12 5v14"></path>
+                              <path d="M19 12l-7-7-7 7"></path>
+                            } @else {
+                              <path d="M12 19V5"></path>
+                              <path d="M5 12l7 7 7-7"></path>
+                            }
+                          </svg>
+                        } @else {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.35">
+                            <path d="M12 5v14"></path>
+                            <path d="M19 12l-7-7-7 7"></path>
+                            <path d="M5 12l7 7 7-7"></path>
+                          </svg>
+                        }
+                      </span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="toggleSort('name')">
+                      <span>Name</span>
+                      <span class="table-sort-icons">
+                        @if (sortColumn === 'name') {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            @if (sortDirection === 'asc') {
+                              <path d="M12 5v14"></path>
+                              <path d="M19 12l-7-7-7 7"></path>
+                            } @else {
+                              <path d="M12 19V5"></path>
+                              <path d="M5 12l7 7 7-7"></path>
+                            }
+                          </svg>
+                        } @else {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.35">
+                            <path d="M12 5v14"></path>
+                            <path d="M19 12l-7-7-7 7"></path>
+                            <path d="M5 12l7 7 7-7"></path>
+                          </svg>
+                        }
+                      </span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" class="table-sort-button" (click)="toggleSort('status')">
+                      <span>Status</span>
+                      <span class="table-sort-icons">
+                        @if (sortColumn === 'status') {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            @if (sortDirection === 'asc') {
+                              <path d="M12 5v14"></path>
+                              <path d="M19 12l-7-7-7 7"></path>
+                            } @else {
+                              <path d="M12 19V5"></path>
+                              <path d="M5 12l7 7 7-7"></path>
+                            }
+                          </svg>
+                        } @else {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.35">
+                            <path d="M12 5v14"></path>
+                            <path d="M19 12l-7-7-7 7"></path>
+                            <path d="M5 12l7 7 7-7"></path>
+                          </svg>
+                        }
+                      </span>
+                    </button>
+                  </th>
                   <th style="width: 150px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterId" placeholder="Search ID"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterName" placeholder="Search name"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterStatus">
+                      <option value="ALL">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                @for (type of partnerTypes(); track type.id) {
+                @for (type of displayedPartnerTypes(); track type.id) {
                   <tr>
                     <td class="text-muted">#{{ type.id }}</td>
                     <td class="text-bold">{{ type.name }}</td>
@@ -167,11 +248,27 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .card-table {
       padding: 0;
       overflow: hidden;
+      min-width: 0;
     }
     .table-container {
       width: 100%;
       overflow-x: auto;
+      min-width: 0;
     }
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .table-container .data-table th,
+    .table-container .data-table td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .table-container .data-table th:nth-child(1), .table-container .data-table td:nth-child(1) { width: 100px; }
+    .table-container .data-table th:nth-child(2), .table-container .data-table td:nth-child(2) { width: auto; }
+    .table-container .data-table th:nth-child(3), .table-container .data-table td:nth-child(3) { width: 120px; }
+    .table-container .data-table th:nth-child(4), .table-container .data-table td:nth-child(4) { width: 140px; }
     .code-badge {
       background-color: var(--bg-primary);
       border: 1px solid var(--border-color);
@@ -386,6 +483,42 @@ export class PartnerTypesComponent implements OnInit {
   partnerTypes = signal<PartnerTypeDto[]>([]);
   loading = signal(true);
   saving = signal(false);
+  sortColumn: 'id' | 'name' | 'status' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  filterId = '';
+  filterName = '';
+  filterStatus = 'ALL';
+
+  displayedPartnerTypes = computed(() => {
+    const idQuery = this.filterId.trim().toLowerCase();
+    const nameQuery = this.filterName.trim().toLowerCase();
+    const statusFilter = this.filterStatus;
+
+    const filtered = this.partnerTypes().filter(type => {
+      if (idQuery && !String(type.id ?? '').toLowerCase().includes(idQuery)) return false;
+      if (nameQuery && !type.name.toLowerCase().includes(nameQuery)) return false;
+      if (statusFilter !== 'ALL') {
+        const active = statusFilter === 'ACTIVE';
+        if (type.status !== active) return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      if (this.sortColumn === 'id') {
+        comparison = (left.id ?? 0) - (right.id ?? 0);
+      } else if (this.sortColumn === 'status') {
+        comparison = Number(left.status) - Number(right.status);
+      } else {
+        comparison = left.name.localeCompare(right.name);
+      }
+
+      return comparison * direction;
+    });
+  });
 
   // Form handling
   formOpen = signal(false);
@@ -533,5 +666,21 @@ export class PartnerTypesComponent implements OnInit {
   cancelDelete() {
     this.showConfirmDeleteDialog.set(false);
     this.selectedType.set(null);
+  }
+
+  toggleSort(column: 'id' | 'name' | 'status') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 }

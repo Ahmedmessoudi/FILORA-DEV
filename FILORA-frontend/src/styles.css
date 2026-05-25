@@ -303,6 +303,58 @@ body.dark-theme .glass-panel {
   background-color: var(--bg-tertiary);
 }
 
+.table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.table-sort-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-muted);
+}
+
+.table-sort-icons svg {
+  display: block;
+}
+
+.table-filter-row th {
+  padding-top: 6px;
+  padding-bottom: 8px;
+  background-color: var(--bg-secondary);
+}
+
+.table-filter-input,
+.table-filter-select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+}
+
+.table-filter-input:focus,
+.table-filter-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.12);
+}
+
+.table-filter-select {
+  cursor: pointer;
+}
+
 /* Card-table helpers: make table cards use flex so inner table containers can scroll */
 .card.card-table {
   display: flex;
@@ -541,81 +593,73 @@ body.dark-theme tr.overdue:hover td {
   color: #ffffff !important;
 }
 
-/* ─── Modal / Dialog — Always White Background ─── */
+/* ─── Modal / Dialog ─── */
 .modal-container,
 .modal-container.glass-panel {
-  background: #FFFFFF !important;
+  background: var(--bg-secondary) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border: 1px solid #d0d7de !important;
-  color: #24292f !important;
-}
-body.dark-theme .modal-container,
-body.dark-theme .modal-container.glass-panel {
-  background: #FFFFFF !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 1px solid #d0d7de !important;
-  color: #24292f !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
 }
 .modal-container .modal-header h3,
 .modal-container .form-label,
 .modal-container .checkbox-label {
-  color: #24292f !important;
+  color: var(--text-primary) !important;
 }
 .modal-container .form-control {
-  background-color: #FFFFFF !important;
-  border-color: #d0d7de !important;
-  color: #24292f !important;
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
 }
 .modal-container .form-control:focus {
-  border-color: #0078d4 !important;
+  border-color: var(--border-focus) !important;
   box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15) !important;
 }
 .modal-container .modal-footer {
-  background-color: #f6f8fa !important;
-  border-top-color: #d0d7de !important;
+  background-color: var(--bg-tertiary) !important;
+  border-top-color: var(--border-color) !important;
 }
 .modal-container .modal-header {
-  border-bottom-color: #d0d7de !important;
+  border-bottom-color: var(--border-color) !important;
 }
 .modal-container .btn-close {
-  color: #57606a !important;
+  color: var(--text-muted) !important;
 }
 .modal-container .btn-close:hover {
-  color: #24292f !important;
+  color: var(--text-primary) !important;
 }
 .modal-container .modal-body {
-  color: #57606a !important;
+  color: var(--text-secondary) !important;
 }
 .modal-container .checkbox-container {
-  color: #57606a !important;
+  color: var(--text-secondary) !important;
 }
 .modal-container .selection-section,
 .modal-container .company-assignments-section {
-  border-top-color: #d0d7de !important;
+  border-top-color: var(--border-color) !important;
 }
 .modal-container .checkbox-checkmark {
-  background-color: #FFFFFF !important;
-  border-color: #8b949e !important;
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--text-muted) !important;
 }
 .modal-container .checkbox-container input:checked ~ .checkbox-checkmark,
 .modal-container .checkbox-container input:indeterminate ~ .checkbox-checkmark {
-  background-color: #0078d4 !important;
-  border-color: #0078d4 !important;
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
 }
 .modal-container .checkbox-container input:checked ~ .checkbox-checkmark:after,
 .modal-container .checkbox-container input:indeterminate ~ .checkbox-checkmark:after {
   border-color: #FFFFFF !important;
 }
 .modal-container .text-muted {
-  color: #8b949e !important;
+  color: var(--text-muted) !important;
 }
 .modal-container .desc-text {
-  color: #57606a !important;
+  color: var(--text-secondary) !important;
 }
 .modal-container .section-subtitle {
-  color: #57606a !important;
+  color: var(--text-secondary) !important;
 }
 
 /* ─── Mobile Responsiveness ─── */

@@ -39,7 +39,10 @@ public class SettingsService {
     @Transactional
     public void updateSetting(String key, String value, User updater, String ipAddress) {
         AppSetting setting = appSettingRepository.findById(key)
-                .orElseThrow(() -> new IllegalArgumentException("Setting key not found: " + key));
+            .orElseGet(() -> AppSetting.builder()
+                .key(key)
+                .description(defaultDescriptionFor(key))
+                .build());
 
         String oldValue = setting.getValue();
         setting.setValue(value);
@@ -63,6 +66,30 @@ public class SettingsService {
         } catch (IOException e) {
             log.error("Failed to write updated settings back to root .env file: {}", e.getMessage());
         }
+    }
+
+    private String defaultDescriptionFor(String key) {
+        return switch (key) {
+            case "SYSTEM_NAME" -> "System instance name";
+            case "SYSTEM_ENABLED" -> "Whether the system is active";
+            case "SYSTEM_MAX_USERS" -> "Maximum allowable active users";
+            case "SYSTEM_MAX_ENTITIES" -> "Maximum internal entities";
+            case "SYSTEM_MAX_EXTERNAL_ENTITIES" -> "Maximum external entities";
+            case "SYSTEM_MAX_FILE_SIZE" -> "Maximum upload size in KB";
+            case "SYSTEM_TABLE_PAGE_SIZE" -> "Default documents page size for lazy loading";
+            case "CURRENCY" -> "System default currency symbol/code";
+            case "DEFAULT_LANGUAGE" -> "Default system language";
+            case "SUPPORTED_LANGUAGES" -> "Comma-separated list of supported languages";
+            case "TWO_FACTOR_ENABLED" -> "Whether two-factor authentication is globally enabled";
+            case "TWO_FACTOR_METHOD" -> "Default 2FA method (EMAIL or TOTP)";
+            case "SMTP_HOST" -> "SMTP server host";
+            case "SMTP_PORT" -> "SMTP server port";
+            case "SMTP_EMAIL" -> "SMTP username/email";
+            case "SMTP_PASSWORD" -> "SMTP password or app password";
+            case "OCR_SERVICE_URL" -> "OCR service endpoint";
+            case "OCR_CONFIDENCE_THRESHOLD" -> "OCR confidence threshold";
+            default -> null;
+        };
     }
 
     private void syncSettingToRuntime(String key, String value) {

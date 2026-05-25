@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -49,18 +49,76 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Description</th>
-                    <th>DocTypes</th>
-                    <th>Status</th>
-                    <th style="width:200px;" class="text-center">Actions</th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('name')">
+                          <span>Name</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('address')">
+                          <span>Address</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'address' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('email')">
+                          <span>Email</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'email' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('phone')">
+                          <span>Phone</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'phone' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('description')">
+                          <span>Description</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'description' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('docTypes')">
+                          <span>DocTypes</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'docTypes' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button type="button" class="table-sort-button" (click)="toggleSort('status')">
+                          <span>Status</span>
+                          <span class="table-sort-icons">{{ sortColumn === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span>
+                        </button>
+                      </th>
+                      <th style="width:200px;" class="text-center">Actions</th>
+                  </tr>
+                  <tr class="table-filter-row">
+                    <th><input class="table-filter-input" type="text" [(ngModel)]="filterName" placeholder="Search name"></th>
+                    <th><input class="table-filter-input" type="text" [(ngModel)]="filterAddress" placeholder="Search address"></th>
+                    <th><input class="table-filter-input" type="text" [(ngModel)]="filterEmail" placeholder="Search email"></th>
+                    <th><input class="table-filter-input" type="text" [(ngModel)]="filterPhone" placeholder="Search phone"></th>
+                    <th><input class="table-filter-input" type="text" [(ngModel)]="filterDescription" placeholder="Search description"></th>
+                    <th>
+                      <select class="table-filter-select" [(ngModel)]="filterDocType">
+                        <option value="ALL">All DocTypes</option>
+                        @for (docType of availableDocTypes(); track docType.id) {
+                          <option [value]="docType.name">{{ docType.name }}</option>
+                        }
+                      </select>
+                    </th>
+                    <th>
+                      <select class="table-filter-select" [(ngModel)]="filterStatus">
+                        <option value="ALL">All</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                      </select>
+                    </th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (entity of entities(); track entity.id) {
+                    @for (entity of displayedEntities(); track entity.id) {
                     <tr [class.inactive]="!entity.isActive">
                       <td class="text-bold">{{ entity.name }}</td>
                       <td>{{ entity.address }}</td>
@@ -214,10 +272,36 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .card-table {
       padding: 0;
       overflow: hidden;
+      min-width: 0;
     }
     .table-container {
       width: 100%;
       overflow-x: auto;
+      min-width: 0;
+    }
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    .table-container .data-table th,
+    .table-container .data-table td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .table-container .data-table th:nth-child(1), .table-container .data-table td:nth-child(1) { width: 14%; }
+    .table-container .data-table th:nth-child(2), .table-container .data-table td:nth-child(2) { width: 18%; }
+    .table-container .data-table th:nth-child(3), .table-container .data-table td:nth-child(3) { width: 18%; }
+    .table-container .data-table th:nth-child(4), .table-container .data-table td:nth-child(4) { width: 12%; }
+    .table-container .data-table th:nth-child(5), .table-container .data-table td:nth-child(5) { width: 16%; }
+    .table-container .data-table th:nth-child(6), .table-container .data-table td:nth-child(6) { width: 15%; }
+    .table-container .data-table th:nth-child(7), .table-container .data-table td:nth-child(7) { width: 8%; }
+    .table-container .data-table th:nth-child(8), .table-container .data-table td:nth-child(8) { width: 9%; }
+    .table-container .data-table td:nth-child(2),
+    .table-container .data-table td:nth-child(3),
+    .table-container .data-table td:nth-child(5) {
+      white-space: normal;
+      word-break: break-word;
     }
     .actions-group {
       display: flex;
@@ -540,6 +624,91 @@ export class EntitiesComponent implements OnInit {
   entityDocTypes = signal<Record<number, DocTypeDto[]>>({});
   loading = signal(true);
   saving = signal(false);
+  sortColumn: 'name' | 'address' | 'email' | 'phone' | 'description' | 'docTypes' | 'status' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  filterName = '';
+  filterAddress = '';
+  filterEmail = '';
+  filterPhone = '';
+  filterDescription = '';
+  filterDocType = 'ALL';
+  filterStatus = 'ALL';
+
+  availableDocTypes = computed(() => {
+    const seen = new Map<number, string>();
+    Object.values(this.entityDocTypes()).forEach(list => {
+      list.forEach(docType => {
+        if (docType.id != null) seen.set(docType.id, docType.name);
+      });
+    });
+
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  });
+
+  displayedEntities = computed(() => {
+    const nameQuery = this.filterName.trim().toLowerCase();
+    const addressQuery = this.filterAddress.trim().toLowerCase();
+    const emailQuery = this.filterEmail.trim().toLowerCase();
+    const phoneQuery = this.filterPhone.trim().toLowerCase();
+    const descriptionQuery = this.filterDescription.trim().toLowerCase();
+    const docTypeFilter = this.filterDocType;
+    const statusFilter = this.filterStatus;
+
+    const filtered = this.entities().filter(entity => {
+      if (nameQuery && !entity.name.toLowerCase().includes(nameQuery)) return false;
+      if (addressQuery && !entity.address.toLowerCase().includes(addressQuery)) return false;
+      if (emailQuery && !entity.email.toLowerCase().includes(emailQuery)) return false;
+      if (phoneQuery && !entity.phone.toLowerCase().includes(phoneQuery)) return false;
+      if (descriptionQuery && !(entity.description || '').toLowerCase().includes(descriptionQuery)) return false;
+
+      const entityDocTypeNames = (this.entityDocTypes()[entity.id!] || []).map(docType => docType.name);
+      if (docTypeFilter !== 'ALL' && !entityDocTypeNames.includes(docTypeFilter)) return false;
+
+      if (statusFilter !== 'ALL') {
+        const active = statusFilter === 'ACTIVE';
+        if (entity.isActive !== active) return false;
+      }
+
+      return true;
+    });
+
+    return [...filtered].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      switch (this.sortColumn) {
+        case 'address':
+          comparison = left.address.localeCompare(right.address);
+          break;
+        case 'email':
+          comparison = left.email.localeCompare(right.email);
+          break;
+        case 'phone':
+          comparison = left.phone.localeCompare(right.phone);
+          break;
+        case 'description':
+          comparison = (left.description || '').localeCompare(right.description || '');
+          break;
+        case 'docTypes': {
+          const leftDocTypes = (this.entityDocTypes()[left.id!] || []).map(docType => docType.name).join(', ');
+          const rightDocTypes = (this.entityDocTypes()[right.id!] || []).map(docType => docType.name).join(', ');
+          comparison = leftDocTypes.localeCompare(rightDocTypes);
+          break;
+        }
+        case 'status':
+          comparison = Number(left.isActive) - Number(right.isActive);
+          break;
+        case 'name':
+        default:
+          comparison = left.name.localeCompare(right.name);
+          break;
+      }
+
+      return comparison * direction;
+    });
+  });
 
   // Form handling
   formOpen = signal(false);
@@ -734,5 +903,21 @@ export class EntitiesComponent implements OnInit {
         this.toastService.error('Error', err.error?.message || 'Error occurred while updating entity status.');
       }
     });
+  }
+
+  toggleSort(column: 'name' | 'address' | 'email' | 'phone' | 'description' | 'docTypes' | 'status') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 }

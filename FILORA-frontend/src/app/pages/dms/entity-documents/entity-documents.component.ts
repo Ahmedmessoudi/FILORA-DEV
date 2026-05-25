@@ -202,16 +202,43 @@ import JSZip from 'jszip';
                       <span class="checkbox-checkmark"></span>
                     </label>
                   </th>
-                  <th>{{ 'dms.file_name' | translate }}</th>
-                  <th>Partner</th>
-                  <th>Invoice?</th>
-                  <th>HT</th>
-                  <th>TVA</th>
-                  <th>TTC</th>
-                  <th>Doc Date</th>
-                  <th>Due Date</th>
-                  <th>Owner</th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('filename')"><span>{{ 'dms.file_name' | translate }}</span><span class="table-sort-icons">{{ sortColumn === 'filename' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('partnerName')"><span>Partner</span><span class="table-sort-icons">{{ sortColumn === 'partnerName' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('invoice')"><span>Invoice?</span><span class="table-sort-icons">{{ sortColumn === 'invoice' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('totalHt')"><span>HT</span><span class="table-sort-icons">{{ sortColumn === 'totalHt' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('tva')"><span>TVA</span><span class="table-sort-icons">{{ sortColumn === 'tva' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('totalTtc')"><span>TTC</span><span class="table-sort-icons">{{ sortColumn === 'totalTtc' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('documentDate')"><span>Doc Date</span><span class="table-sort-icons">{{ sortColumn === 'documentDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('dueDate')"><span>Due Date</span><span class="table-sort-icons">{{ sortColumn === 'dueDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('ownerName')"><span>Owner</span><span class="table-sort-icons">{{ sortColumn === 'ownerName' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
                   <th style="width: 220px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th></th>
+                  <th></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterFileName" placeholder="Search file"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterPartner">
+                      <option value="ALL">All partners</option>
+                      @for (partner of partnerOptions(); track partner) {
+                        <option [value]="partner">{{ partner }}</option>
+                      }
+                    </select>
+                  </th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterInvoiceType">
+                      <option value="ALL">All</option>
+                      <option value="INVOICES">Yes</option>
+                      <option value="OTHERS">No</option>
+                    </select>
+                  </th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterTotalHt" placeholder="Search HT"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterTva" placeholder="Search TVA"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterTotalTtc" placeholder="Search TTC"></th>
+                  <th><input class="table-filter-input" type="date" [(ngModel)]="filterDocumentDate"></th>
+                  <th><input class="table-filter-input" type="date" [(ngModel)]="filterDueDate"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterOwner" placeholder="Search owner"></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -504,25 +531,32 @@ import JSZip from 'jszip';
       flex-direction: column;
       flex: 1;
       min-height: 0;
+      min-width: 0;
     }
     .table-container {
       width: 100%;
       overflow: auto;
       flex: 1;
       min-height: 0;
+      min-width: 0;
+    }
+
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
     }
 
     .table-container .data-table th,
     .table-container .data-table td {
-      padding: 6px 10px;
-      line-height: 1.1;
+      padding: 5px 8px;
+      line-height: 1.05;
       white-space: nowrap;
       vertical-align: middle;
     }
 
     .table-container .data-table th {
-      padding-top: 8px;
-      padding-bottom: 8px;
+      padding-top: 6px;
+      padding-bottom: 6px;
     }
 
     .table-container .data-table th,
@@ -531,11 +565,13 @@ import JSZip from 'jszip';
     }
 
     .file-name-cell {
-      min-width: max-content;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
     }
 
     .loading-more-row td {
-      padding: 12px;
+      padding: 8px 10px;
       background: var(--bg-secondary);
     }
 
@@ -556,18 +592,20 @@ import JSZip from 'jszip';
       display: flex;
       align-items: center;
       gap: 8px;
-      max-width: 350px;
+      max-width: 100%;
     }
     .file-meta-wrapper {
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-width: 0;
     }
     .file-title {
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: block;
       color: var(--text-primary);
     }
     .file-subtext {
@@ -582,6 +620,7 @@ import JSZip from 'jszip';
       display: flex;
       justify-content: center;
       gap: 4px;
+      flex-wrap: wrap;
     }
     .action-btn {
       background: none;
@@ -622,6 +661,23 @@ import JSZip from 'jszip';
       padding: 4px;
       display: flex;
       flex-direction: column;
+    }
+
+    .table-filter-row th {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+
+    .table-filter-input,
+    .table-filter-select {
+      padding: 4px 6px;
+      min-height: 30px;
+      font-size: 0.75rem;
+    }
+
+    .table-container .data-table th:nth-child(3),
+    .table-container .data-table td:nth-child(3) {
+      width: 260px;
     }
     .dropdown-item {
       padding: 8px 12px;
@@ -824,6 +880,23 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   filterMinAmount: number | null = null;
   filterMaxAmount: number | null = null;
   filterInvoiceType = 'ALL';
+  filterFileName = '';
+  filterOwner = '';
+  filterTotalHt = '';
+  filterTva = '';
+  filterTotalTtc = '';
+  filterDocumentDate = '';
+  filterDueDate = '';
+  sortColumn: 'filename' | 'partnerName' | 'invoice' | 'totalHt' | 'tva' | 'totalTtc' | 'documentDate' | 'dueDate' | 'ownerName' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+
+  partnerOptions = computed(() => {
+    const values = new Set<string>();
+    this.partners().forEach(partner => {
+      if (partner.companyName) values.add(partner.companyName);
+    });
+    return Array.from(values).sort((left, right) => left.localeCompare(right));
+  });
 
   // Modal control triggers
   showUploadModal = signal(false);
@@ -859,6 +932,36 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   // Client-side filtering computed reactively
   filteredDocuments = computed(() => {
     let list = this.documents();
+
+    const fileNameQuery = this.filterFileName.trim().toLowerCase();
+    const ownerQuery = this.filterOwner.trim().toLowerCase();
+    const totalHtQuery = this.filterTotalHt.trim();
+    const tvaQuery = this.filterTva.trim();
+    const totalTtcQuery = this.filterTotalTtc.trim();
+    const documentDateQuery = this.filterDocumentDate.trim();
+    const dueDateQuery = this.filterDueDate.trim();
+
+    if (fileNameQuery) {
+      list = list.filter(d => d.filename.toLowerCase().includes(fileNameQuery));
+    }
+    if (ownerQuery) {
+      list = list.filter(d => d.ownerName.toLowerCase().includes(ownerQuery));
+    }
+    if (totalHtQuery) {
+      list = list.filter(d => String(d.totalHt ?? '').includes(totalHtQuery));
+    }
+    if (tvaQuery) {
+      list = list.filter(d => String(d.tva ?? '').includes(tvaQuery));
+    }
+    if (totalTtcQuery) {
+      list = list.filter(d => String(d.totalTtc ?? '').includes(totalTtcQuery));
+    }
+    if (documentDateQuery) {
+      list = list.filter(d => d.documentDate && String(d.documentDate).startsWith(documentDateQuery));
+    }
+    if (dueDateQuery) {
+      list = list.filter(d => d.dueDate && String(d.dueDate).startsWith(dueDateQuery));
+    }
 
     // OCR Status Filter
     if (this.filterOcrStatus !== 'ALL') {
@@ -897,7 +1000,47 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
       list = list.filter(d => d.isInvoice !== true);
     }
 
-    return list;
+    if (!this.sortColumn) {
+      return list;
+    }
+
+    return [...list].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      switch (this.sortColumn) {
+        case 'partnerName':
+          comparison = (left.partnerName || '').localeCompare(right.partnerName || '');
+          break;
+        case 'invoice':
+          comparison = Number(left.isInvoice) - Number(right.isInvoice);
+          break;
+        case 'totalHt':
+          comparison = (left.totalHt ?? 0) - (right.totalHt ?? 0);
+          break;
+        case 'tva':
+          comparison = (left.tva ?? 0) - (right.tva ?? 0);
+          break;
+        case 'totalTtc':
+          comparison = (left.totalTtc ?? 0) - (right.totalTtc ?? 0);
+          break;
+        case 'documentDate':
+          comparison = new Date(left.documentDate || 0).getTime() - new Date(right.documentDate || 0).getTime();
+          break;
+        case 'dueDate':
+          comparison = new Date(left.dueDate || 0).getTime() - new Date(right.dueDate || 0).getTime();
+          break;
+        case 'ownerName':
+          comparison = left.ownerName.localeCompare(right.ownerName);
+          break;
+        case 'filename':
+        default:
+          comparison = left.filename.localeCompare(right.filename);
+          break;
+      }
+
+      return comparison * direction;
+    });
   });
 
   // Checkbox helpers
@@ -1056,6 +1199,22 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
     if (remaining < 250) {
       this.loadDocuments(false);
     }
+  }
+
+  toggleSort(column: 'filename' | 'partnerName' | 'invoice' | 'totalHt' | 'tva' | 'totalTtc' | 'documentDate' | 'dueDate' | 'ownerName') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 
   // Row Selection logic

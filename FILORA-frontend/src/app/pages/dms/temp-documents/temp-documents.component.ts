@@ -98,12 +98,29 @@ import { catchError } from 'rxjs/operators';
                       <span class="checkbox-checkmark"></span>
                     </label>
                   </th>
-                  <th>{{ 'dms.file_name' | translate }}</th>
-                  <th>Owner</th>
-                  <th>{{ 'dms.upload_date' | translate }}</th>
-                  <th>File type</th>
-                  <th style="width: 120px;">Size</th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('filename')"><span>{{ 'dms.file_name' | translate }}</span><span class="table-sort-icons">{{ sortColumn === 'filename' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('ownerName')"><span>Owner</span><span class="table-sort-icons">{{ sortColumn === 'ownerName' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('createdAt')"><span>{{ 'dms.upload_date' | translate }}</span><span class="table-sort-icons">{{ sortColumn === 'createdAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th><button type="button" class="table-sort-button" (click)="toggleSort('fileType')"><span>File type</span><span class="table-sort-icons">{{ sortColumn === 'fileType' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
+                  <th style="width: 120px;"><button type="button" class="table-sort-button" (click)="toggleSort('fileSize')"><span>Size</span><span class="table-sort-icons">{{ sortColumn === 'fileSize' ? (sortDirection === 'asc' ? '▲' : '▼') : '▲▼' }}</span></button></th>
                   <th style="width: 150px;" class="text-center">{{ 'dms.actions' | translate }}</th>
+                </tr>
+                <tr class="table-filter-row">
+                  <th></th>
+                  <th></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterFileName" placeholder="Search file"></th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterOwner" placeholder="Search owner"></th>
+                  <th><input class="table-filter-input" type="date" [(ngModel)]="filterCreatedAt"></th>
+                  <th>
+                    <select class="table-filter-select" [(ngModel)]="filterFileType">
+                      <option value="ALL">All types</option>
+                      @for (type of fileTypeOptions(); track type) {
+                        <option [value]="type">{{ type }}</option>
+                      }
+                    </select>
+                  </th>
+                  <th><input class="table-filter-input" type="text" [(ngModel)]="filterSize" placeholder="Search size"></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -274,29 +291,36 @@ import { catchError } from 'rxjs/operators';
       flex-direction: column;
       flex: 1;
       min-height: 0;
+      min-width: 0;
     }
     .table-container {
       width: 100%;
       overflow: auto;
       flex: 1;
       min-height: 0;
+      min-width: 0;
+    }
+
+    .table-container .data-table {
+      width: 100%;
+      table-layout: fixed;
     }
 
     .table-container .data-table th,
     .table-container .data-table td {
-      padding: 6px 10px;
-      line-height: 1.1;
+      padding: 5px 8px;
+      line-height: 1.05;
       white-space: nowrap;
       vertical-align: middle;
     }
 
     .table-container .data-table th {
-      padding-top: 8px;
-      padding-bottom: 8px;
+      padding-top: 6px;
+      padding-bottom: 6px;
     }
 
     .loading-more-row td {
-      padding: 12px;
+      padding: 8px 10px;
       background: var(--bg-secondary);
     }
 
@@ -317,7 +341,9 @@ import { catchError } from 'rxjs/operators';
       display: flex;
       align-items: center;
       gap: 8px;
-      max-width: 320px;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
     }
     .file-icon {
       flex-shrink: 0;
@@ -327,6 +353,7 @@ import { catchError } from 'rxjs/operators';
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: block;
     }
     .user-badge {
       background-color: var(--bg-primary);
@@ -340,6 +367,7 @@ import { catchError } from 'rxjs/operators';
       display: flex;
       justify-content: center;
       gap: 4px;
+      flex-wrap: wrap;
     }
     .action-btn {
       background: none;
@@ -459,6 +487,23 @@ import { catchError } from 'rxjs/operators';
       font-size: 0.85rem;
     }
 
+    .table-filter-row th {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+
+    .table-filter-input,
+    .table-filter-select {
+      padding: 4px 6px;
+      min-height: 30px;
+      font-size: 0.75rem;
+    }
+
+    .table-container .data-table th:nth-child(3),
+    .table-container .data-table td:nth-child(3) {
+      width: 260px;
+    }
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
@@ -504,9 +549,24 @@ export class TempDocumentsComponent implements OnInit {
   loadingMore = signal(false);
   hasMoreDocuments = signal(true);
   searchQuery = '';
+  filterFileName = '';
+  filterOwner = '';
+  filterFileType = 'ALL';
+  filterCreatedAt = '';
+  filterSize = '';
+  sortColumn: 'filename' | 'ownerName' | 'createdAt' | 'fileType' | 'fileSize' | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
   private readonly pageSize = signal(50);
   private settingsLoaded = false;
   private currentPage = 0;
+
+  fileTypeOptions = computed(() => {
+    const values = new Set<string>();
+    this.documents().forEach(doc => {
+      if (doc.fileType) values.add(doc.fileType);
+    });
+    return Array.from(values).sort((left, right) => left.localeCompare(right));
+  });
 
   // Modals visibility triggers
   showUploadModal = signal(false);
@@ -527,12 +587,51 @@ export class TempDocumentsComponent implements OnInit {
   // Filtered documents computed reactively
   filteredDocuments = computed(() => {
     const query = this.searchQuery.trim().toLowerCase();
-    const list = this.documents();
-    if (!query) return list;
-    return list.filter(d => 
-      d.filename.toLowerCase().includes(query) || 
-      d.ownerName.toLowerCase().includes(query)
+    const fileNameQuery = this.filterFileName.trim().toLowerCase();
+    const ownerQuery = this.filterOwner.trim().toLowerCase();
+    const fileTypeFilter = this.filterFileType;
+    const createdAtQuery = this.filterCreatedAt.trim();
+    const sizeQuery = this.filterSize.trim();
+
+    let list = this.documents().filter(d =>
+      !query || d.filename.toLowerCase().includes(query) || d.ownerName.toLowerCase().includes(query)
     );
+
+    if (fileNameQuery) list = list.filter(d => d.filename.toLowerCase().includes(fileNameQuery));
+    if (ownerQuery) list = list.filter(d => d.ownerName.toLowerCase().includes(ownerQuery));
+    if (fileTypeFilter !== 'ALL') list = list.filter(d => (d.fileType || '') === fileTypeFilter);
+    if (createdAtQuery) list = list.filter(d => d.createdAt && String(d.createdAt).startsWith(createdAtQuery));
+    if (sizeQuery) list = list.filter(d => String(d.fileSize ?? '').includes(sizeQuery));
+
+    if (!this.sortColumn) {
+      return list;
+    }
+
+    return [...list].sort((left, right) => {
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      let comparison = 0;
+
+      switch (this.sortColumn) {
+        case 'ownerName':
+          comparison = left.ownerName.localeCompare(right.ownerName);
+          break;
+        case 'createdAt':
+          comparison = new Date(left.createdAt || 0).getTime() - new Date(right.createdAt || 0).getTime();
+          break;
+        case 'fileType':
+          comparison = (left.fileType || '').localeCompare(right.fileType || '');
+          break;
+        case 'fileSize':
+          comparison = (left.fileSize ?? 0) - (right.fileSize ?? 0);
+          break;
+        case 'filename':
+        default:
+          comparison = left.filename.localeCompare(right.filename);
+          break;
+      }
+
+      return comparison * direction;
+    });
   });
 
   // Checkbox helpers
@@ -634,6 +733,22 @@ export class TempDocumentsComponent implements OnInit {
     if (remaining < 250) {
       this.loadDocuments(false);
     }
+  }
+
+  toggleSort(column: 'filename' | 'ownerName' | 'createdAt' | 'fileType' | 'fileSize') {
+    if (this.sortColumn === column) {
+      if (this.sortDirection === 'asc') {
+        this.sortDirection = 'desc';
+        return;
+      }
+
+      this.sortColumn = null;
+      this.sortDirection = 'asc';
+      return;
+    }
+
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
 
   formatSize(bytes: number): string {
