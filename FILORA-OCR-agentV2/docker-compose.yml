@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  filora-ocr-agent-v2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filora-ocr-agent-v2
+    ports:
+      - "8001:8000"
+    environment:
+      - OCR_METHOD=hf                # Method can be 'hf' or 'vllm'
+      - VLLM_API_BASE=http://host.docker.internal:8000/v1
+      - VLLM_MODEL_NAME=datalab-to/chandra
+      - BACKEND_URL=http://host.docker.internal:8080
+    volumes:
+      - ../dms-data/upload:/app/dms-data/upload
+      - hf-cache:/root/.cache/huggingface
+
+volumes:
+  hf-cache:

@@ -1,5 +1,6 @@
 package com.filora.dms.seeder;
 
+import com.filora.dms.config.AppProperties;
 import com.filora.dms.entity.User;
 import com.filora.dms.entity.AppSetting;
 import com.filora.dms.repository.UserRepository;
@@ -22,6 +23,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final AppSettingRepository appSettingRepository;
+    private final AppProperties appProperties;
 
     @Override
     @Transactional
@@ -35,17 +37,17 @@ public class DataSeeder implements CommandLineRunner {
             log.info("Seeding application settings...");
             
             Map<String, String[]> defaultSettings = new HashMap<>();
-            defaultSettings.put("SYSTEM_NAME", new String[]{"FiloraDEV", "System instance name"});
-            defaultSettings.put("SYSTEM_ENABLED", new String[]{"true", "Whether the system is active"});
-            defaultSettings.put("SYSTEM_MAX_USERS", new String[]{"12", "Maximum allowable active users"});
-            defaultSettings.put("SYSTEM_MAX_ENTITIES", new String[]{"4", "Maximum internal entities"});
-            defaultSettings.put("SYSTEM_MAX_EXTERNAL_ENTITIES", new String[]{"4", "Maximum external entities"});
-            defaultSettings.put("SYSTEM_MAX_FILE_SIZE", new String[]{"1024", "Maximum upload size in KB"});
-            defaultSettings.put("CURRENCY", new String[]{"TND", "System default currency symbol/code"});
-            defaultSettings.put("DEFAULT_LANGUAGE", new String[]{"fr", "Default system language"});
-            defaultSettings.put("SUPPORTED_LANGUAGES", new String[]{"fr,en", "Comma-separated list of supported languages"});
-            defaultSettings.put("TWO_FACTOR_ENABLED", new String[]{"true", "Whether two-factor authentication is globally enabled"});
-            defaultSettings.put("TWO_FACTOR_METHOD", new String[]{"EMAIL", "Default 2FA method (EMAIL or TOTP)"});
+            defaultSettings.put("SYSTEM_NAME", new String[]{appProperties.getSystem().getName(), "System instance name"});
+            defaultSettings.put("SYSTEM_ENABLED", new String[]{String.valueOf(appProperties.getSystem().isEnabled()), "Whether the system is active"});
+            defaultSettings.put("SYSTEM_MAX_USERS", new String[]{String.valueOf(appProperties.getSystem().getMaxUsers()), "Maximum allowable active users"});
+            defaultSettings.put("SYSTEM_MAX_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxEntities()), "Maximum internal entities"});
+            defaultSettings.put("SYSTEM_MAX_EXTERNAL_ENTITIES", new String[]{String.valueOf(appProperties.getSystem().getMaxExternalEntities()), "Maximum external entities"});
+            defaultSettings.put("SYSTEM_MAX_FILE_SIZE", new String[]{String.valueOf(appProperties.getSystem().getMaxFileSize()), "Maximum upload size in KB"});
+            defaultSettings.put("CURRENCY", new String[]{appProperties.getSystem().getCurrency(), "System default currency symbol/code"});
+            defaultSettings.put("DEFAULT_LANGUAGE", new String[]{appProperties.getSystem().getDefaultLanguage(), "Default system language"});
+            defaultSettings.put("SUPPORTED_LANGUAGES", new String[]{String.join(",", appProperties.getSystem().getSupportedLanguages()), "Comma-separated list of supported languages"});
+            defaultSettings.put("TWO_FACTOR_ENABLED", new String[]{String.valueOf(appProperties.getSecurity().isTwoFactorEnabled()), "Whether two-factor authentication is globally enabled"});
+            defaultSettings.put("TWO_FACTOR_METHOD", new String[]{appProperties.getSecurity().getTwoFactorMethod(), "Default 2FA method (EMAIL or TOTP)"});
 
             for (Map.Entry<String, String[]> entry : defaultSettings.entrySet()) {
                 AppSetting setting = AppSetting.builder()

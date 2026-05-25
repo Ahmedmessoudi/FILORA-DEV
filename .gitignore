@@ -13,3 +13,6 @@ logs/
 # ─── OS ───
 .DS_Store
 Thumbs.db
+
+Filora_DMS_Master_Prompt.md
+implementation_plan*.md

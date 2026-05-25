@@ -1,5 +1,6 @@
 package com.filora.dms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;
@@ -21,6 +22,7 @@ public class AppSetting {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by")
+    @JsonIgnore
     private User updatedBy;
 
     @Column(name = "updated_at")

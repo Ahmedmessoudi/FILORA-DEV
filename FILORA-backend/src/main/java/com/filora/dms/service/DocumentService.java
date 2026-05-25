@@ -166,7 +166,7 @@ public class DocumentService {
         auditService.log("REPROCESS_OCR", "Document", id, details, ipAddress);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void shareDocumentByEmail(
             Integer id,
             String recipientEmail,

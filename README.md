@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>🌸 FILORA — Document Management System</strong>
+  <strong> FILORA — Document Management System</strong>
 </p>
 
 <p align="center">

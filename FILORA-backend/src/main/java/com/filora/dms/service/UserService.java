@@ -63,8 +63,9 @@ public class UserService {
         User saved = userRepository.save(user);
 
         // Assign Entities
-        if (companyIds != null) {
-            for (Integer cid : companyIds) {
+        Set<Integer> uniqueCompanyIds = normalizeCompanyIds(companyIds);
+        if (!uniqueCompanyIds.isEmpty()) {
+            for (Integer cid : uniqueCompanyIds) {
                 CompanyEntity company = companyEntityRepository.findById(cid)
                         .orElseThrow(() -> new IllegalArgumentException("Entity not found: " + cid));
                 UserEntity ue = UserEntity.builder().user(saved).company(company).build();
@@ -96,8 +97,10 @@ public class UserService {
 
         // Sync Entity Assignments
         userEntityRepository.deleteByUser(saved);
-        if (companyIds != null) {
-            for (Integer cid : companyIds) {
+        userEntityRepository.flush();
+        Set<Integer> uniqueCompanyIds = normalizeCompanyIds(companyIds);
+        if (!uniqueCompanyIds.isEmpty()) {
+            for (Integer cid : uniqueCompanyIds) {
                 CompanyEntity company = companyEntityRepository.findById(cid)
                         .orElseThrow(() -> new IllegalArgumentException("Entity not found: " + cid));
                 UserEntity ue = UserEntity.builder().user(saved).company(company).build();
@@ -161,5 +164,14 @@ public class UserService {
                 .stream()
                 .map(UserEntity::getCompany)
                 .collect(Collectors.toList());
+    }
+
+    private Set<Integer> normalizeCompanyIds(List<Integer> companyIds) {
+        if (companyIds == null || companyIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return companyIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }
