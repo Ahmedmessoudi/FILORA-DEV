@@ -11,7 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +42,43 @@ public class AuditService {
                 .build();
                 
         auditLogRepository.save(log);
+
+        // Also append a human-readable line to ./logs/actions.log
+        try {
+            String username = currentUser != null ? currentUser.getUsername() : "anonymous";
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String ts = LocalDateTime.now().format(fmt);
+
+            StringBuilder detailBuilder = new StringBuilder();
+            detailBuilder.append("entityType=").append(entityType != null ? entityType : "");
+            if (entityId != null) detailBuilder.append(" id=").append(entityId);
+            if (details != null && !details.isEmpty()) {
+                details.forEach((k, v) -> detailBuilder.append(" ").append(k).append("=").append(v));
+            }
+            if (ipAddress != null && !ipAddress.isBlank()) {
+                detailBuilder.append(" ip=").append(ipAddress);
+            }
+
+            String line = String.format("[%s] [%s] [%s] %s", ts, username, action, detailBuilder.toString());
+
+            Path logsDir = Paths.get("logs");
+            if (!Files.exists(logsDir)) {
+                try {
+                    Files.createDirectories(logsDir);
+                } catch (IOException e) {
+                    // ignore directory creation failures
+                }
+            }
+
+            Path logFile = logsDir.resolve("actions.log");
+            try {
+                Files.writeString(logFile, line + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                // don't let logging to file break main flow
+            }
+        } catch (Exception ex) {
+            // swallow any exceptions while trying to write logs to disk
+        }
     }
 
     private User getCurrentUser() {

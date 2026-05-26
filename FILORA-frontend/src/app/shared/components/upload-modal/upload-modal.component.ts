@@ -1,7 +1,10 @@
 import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { TempDocumentService } from '../../../core/services/temp-document.service';
 import { DocumentService } from '../../../core/services/document.service';
+import { DocTypeService, DocTypeDto } from '../../../core/services/doctype.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 
@@ -15,12 +18,21 @@ interface UploadItem {
 @Component({
   selector: 'app-upload-modal',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="modal-overlay" (click)="onClose()">
       <div class="modal-container glass-panel" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>{{ 'dms.upload_btn' | translate }}</h3>
+          <div class="header-title-wrap">
+            <h3>{{ 'dms.upload_btn' | translate }}</h3>
+            @if (companyId) {
+              <div class="upload-stepper">
+                <span class="step" [class.active]="requiresDocTypeSelection()">1/2 Entity & Folder</span>
+                <span class="step-divider"></span>
+                <span class="step" [class.active]="!requiresDocTypeSelection() || selectedDocTypeId">2/2 Upload & OCR</span>
+              </div>
+            }
+          </div>
           <button class="btn-close" (click)="onClose()" [disabled]="uploading()">
             <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
               <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
@@ -29,6 +41,44 @@ interface UploadItem {
         </div>
 
         <div class="modal-body">
+          @if (companyId) {
+            <div class="context-banner">
+              <div class="context-label">Target</div>
+              <div class="context-values">
+                <span class="context-chip">Entity #{{ companyId }}</span>
+                @if (companyName) {
+                  <span class="context-chip">{{ companyName }}</span>
+                }
+                @if (docTypeId) {
+                  <span class="context-chip context-chip-primary">Folder #{{ docTypeId }}<span class="context-chip-text">{{ docTypeName || '' }}</span></span>
+                } @else {
+                  <span class="context-chip context-chip-warning">Folder required before upload</span>
+                }
+              </div>
+            </div>
+
+            @if (!docTypeId) {
+              <div class="form-group folder-selector-group">
+                <label class="form-label" for="doctype-select">Select destination folder</label>
+                @if (loadingContext()) {
+                  <div class="context-loading">Loading folders...</div>
+                } @else {
+                  <select id="doctype-select" class="form-control"
+                          [ngModel]="selectedDocTypeId"
+                          (ngModelChange)="selectedDocTypeId = $event">
+                    <option [ngValue]="null">-- Choose a folder --</option>
+                    @for (docType of availableDocTypes(); track docType.id) {
+                      <option [ngValue]="docType.id">{{ docType.name }}</option>
+                    }
+                  </select>
+                  @if (availableDocTypes().length === 0) {
+                    <span class="error-text">No folders are assigned to this entity.</span>
+                  }
+                }
+              </div>
+            }
+          }
+
           <!-- Drag and Drop Zone -->
           <div class="drop-zone" 
                [class.drop-zone-active]="dragActive()"
@@ -91,10 +141,12 @@ interface UploadItem {
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="onClose()" [disabled]="uploading()">Cancel</button>
           <button class="btn btn-primary" 
-                  [disabled]="items().length === 0 || uploading()" 
+                  [disabled]="items().length === 0 || uploading() || (companyId && !effectiveDocTypeId())" 
                   (click)="startUpload()">
             @if (uploading()) {
               <span>Uploading...</span>
+            } @else if (companyId && !effectiveDocTypeId()) {
+              <span>Select folder to continue</span>
             } @else {
               <span>Start Upload</span>
             }
@@ -133,6 +185,11 @@ interface UploadItem {
       justify-content: space-between;
       border-bottom: 1px solid var(--border-color);
     }
+    .header-title-wrap { display:flex; flex-direction:column; gap:6px; }
+    .upload-stepper { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .step { font-size:0.75rem; color:var(--text-muted); background:var(--bg-primary); padding:4px 8px; border-radius:999px; }
+    .step.active { background:var(--primary); color:#fff; font-weight:600; }
+    .step-divider { width:20px; height:2px; background:var(--border-color); border-radius:2px; }
     .modal-header h3 {
       font-size: 1.25rem;
       font-weight: 600;
@@ -159,6 +216,29 @@ interface UploadItem {
       flex-direction: column;
       gap: 20px;
     }
+    .context-banner {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .context-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .context-values { display:flex; flex-wrap:wrap; gap:8px; }
+    .context-chip { padding:4px 8px; border-radius:999px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.8rem; color:var(--text-secondary); }
+    .context-chip-primary { background: var(--primary-light); color: var(--primary); }
+    .context-chip-warning { background: var(--warning-light); color: var(--warning, #b45309); }
+    .context-chip-text { margin-left:6px; opacity:0.8; }
+    .folder-selector-group { margin-top: -4px; }
+    .context-loading { font-size: 0.85rem; color: var(--text-secondary); padding: 8px 0; }
     .drop-zone {
       border: 2px dashed var(--border-color);
       border-radius: var(--radius-lg);
@@ -321,21 +401,79 @@ interface UploadItem {
 export class UploadModalComponent {
   @Input() companyId?: number;
   @Input() docTypeId?: number;
+  @Input() companyName = '';
+  @Input() docTypeName = '';
 
-  @Output() uploaded = new EventEmitter<void>();
+  @Output() uploaded = new EventEmitter<number[]>();
   @Output() cancel = new EventEmitter<void>();
 
   private readonly tempDocumentService = inject(TempDocumentService);
   private readonly documentService = inject(DocumentService);
+  private readonly docTypeService = inject(DocTypeService);
   private readonly toastService = inject(ToastService);
 
   items = signal<UploadItem[]>([]);
   dragActive = signal(false);
   uploading = signal(false);
+  private uploadedIds: number[] = [];
+  availableDocTypes = signal<DocTypeDto[]>([]);
+  loadingContext = signal(false);
+  selectedDocTypeId: number | null = null;
 
   // Supported extensions
   private readonly allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'tiff', 'bmp', 'webp', 'docx', 'xlsx'];
   private readonly maxFileSize = 20 * 1024 * 1024; // 20MB
+
+  ngOnInit() {
+    if (this.companyId && !this.docTypeId) {
+      this.loadAvailableDocTypes();
+    }
+  }
+
+  effectiveDocTypeId(): number | null {
+    return this.docTypeId ?? this.selectedDocTypeId;
+  }
+
+  requiresDocTypeSelection(): boolean {
+    return !!this.companyId && !this.docTypeId && !this.selectedDocTypeId;
+  }
+
+  private loadAvailableDocTypes() {
+    if (!this.companyId) return;
+
+    this.loadingContext.set(true);
+    this.docTypeService.getAll().subscribe({
+      next: (res) => {
+        const docTypes = res.success ? (res.data || []) as DocTypeDto[] : [];
+        // Fetch assigned entities per docType and filter by current company
+        const requests = docTypes.map(docType => this.docTypeService.getAssignedEntities(docType.id!));
+        if (requests.length === 0) {
+          this.availableDocTypes.set([]);
+          this.loadingContext.set(false);
+          return;
+        }
+        forkJoin(requests).subscribe({
+          next: (assignedList) => {
+            const filtered = docTypes.filter((docType, index) => {
+              const assigned = assignedList[index];
+              const ids = assigned.success ? (assigned.data || []).map((entity: any) => entity.id) : [];
+              return ids.includes(this.companyId!);
+            });
+            this.availableDocTypes.set(filtered);
+            this.loadingContext.set(false);
+          },
+          error: () => {
+            this.availableDocTypes.set([]);
+            this.loadingContext.set(false);
+          }
+        });
+      },
+      error: () => {
+        this.availableDocTypes.set([]);
+        this.loadingContext.set(false);
+      }
+    });
+  }
 
   onDragOver(e: DragEvent) {
     e.preventDefault();
@@ -415,6 +553,11 @@ export class UploadModalComponent {
     const itemsToUpload = this.items().filter(item => item.status === 'pending' || item.status === 'failed');
     if (itemsToUpload.length === 0) return;
 
+    if (this.companyId && !this.effectiveDocTypeId()) {
+      this.toastService.warning('Missing folder', 'Please choose a folder before uploading.');
+      return;
+    }
+
     this.uploading.set(true);
     this.uploadNext(0, itemsToUpload);
   }
@@ -426,9 +569,10 @@ export class UploadModalComponent {
       const failedCount = this.items().filter(item => item.status === 'failed').length;
       if (failedCount === 0) {
         this.toastService.success('Success', 'All files uploaded successfully.');
-        this.uploaded.emit();
+        this.uploaded.emit(this.uploadedIds);
       } else {
         this.toastService.warning('Upload complete', `${list.length - failedCount} files uploaded, ${failedCount} failed.`);
+        this.uploaded.emit(this.uploadedIds);
       }
       return;
     }
@@ -439,8 +583,9 @@ export class UploadModalComponent {
     this.items.update(items => [...items]);
 
     // Choose upload service
-    const upload$ = (this.companyId && this.docTypeId) 
-      ? this.documentService.upload(item.file, this.companyId, this.docTypeId)
+    const folderId = this.effectiveDocTypeId();
+    const upload$ = (this.companyId && folderId) 
+      ? this.documentService.upload(item.file, this.companyId, folderId)
       : this.tempDocumentService.upload(item.file);
 
     upload$.subscribe({
@@ -448,6 +593,8 @@ export class UploadModalComponent {
         if (res.success) {
           item.progress = 100;
           item.status = 'completed';
+          const createdId = res.data?.id;
+          if (createdId) this.uploadedIds.push(createdId);
         } else {
           item.status = 'failed';
           item.errorMessage = res.message;

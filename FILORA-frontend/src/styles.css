@@ -1,5 +1,10 @@
 /* ─── Filora DMS — Global Design System (Vanilla CSS) ─── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+/* External Google Fonts import commented out to avoid build-time network fetch
+  (Docker build environments may not have outbound access or the request may fail).
+  If you want these fonts in production, vendor the font files into `/src/assets/fonts`
+  and declare them with `@font-face` pointing to local files, or re-enable this
+  import once the build environment has internet access. */
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap'); */
 
 :root {
   /* Colors - Light Theme (Azure inspired) */

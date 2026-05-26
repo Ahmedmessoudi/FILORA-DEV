@@ -187,7 +187,7 @@ import { catchError } from 'rxjs/operators';
     <!-- Modals -->
     @if (showUploadModal()) {
       <app-upload-modal
-        (uploaded)="onUploadComplete()"
+        (uploaded)="onUploadComplete($event)"
         (cancel)="showUploadModal.set(false)">
       </app-upload-modal>
     }
@@ -818,9 +818,20 @@ export class TempDocumentsComponent implements OnInit {
     }
   }
 
-  onUploadComplete() {
+  onUploadComplete(uploadedIds?: number[]) {
     this.showUploadModal.set(false);
     this.loadDocuments(true);
+
+    // If uploads returned created temp IDs, open the promote modal for the first one
+    if (uploadedIds && uploadedIds.length > 0) {
+      const firstId = uploadedIds[0];
+      // Delay slightly to allow list to refresh
+      setTimeout(() => {
+        const doc = this.documents().find(d => d.id === firstId);
+        this.activePromoteName.set(doc ? doc.filename : 'Uploaded file');
+        this.activePromoteId.set(firstId);
+      }, 400);
+    }
   }
 
   onOcrReviewComplete() {

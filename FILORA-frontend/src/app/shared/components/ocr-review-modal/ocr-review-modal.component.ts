@@ -112,123 +112,167 @@ type PreviewTab = 'raw' | 'ocr';
                 <span>Loading metadata...</span>
               </div>
             } @else {
-              <h4 class="section-title">{{ 'dms.ocr_meta' | translate }}</h4>
+              <h4 class="section-title section-title-main">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+                  <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Zm-40-120h80v-80h-80v80Zm0-160h80v-240h-80v240Z"/>
+                </svg>
+                <span>Document details</span>
+              </h4>
 
-              <div class="form-group">
+              <div class="form-group document-name-group">
                 <label class="form-label" for="document-name">Document name</label>
-                <input type="text" id="document-name" class="form-control" [(ngModel)]="documentName">
-              </div>
-              
-              <div class="form-row">
-                <!-- Invoice Number -->
-                <div class="form-group col-6">
-                  <label class="form-label" for="invoice-number">{{ 'dms.invoice_num' | translate }}</label>
-                  <input type="text" id="invoice-number" class="form-control" [(ngModel)]="invoiceNumber">
-                </div>
-
-                <!-- Currency -->
-                <div class="form-group col-6">
-                  <label class="form-label" for="invoice-currency">Currency</label>
-                  <input type="text" id="invoice-currency" class="form-control" [(ngModel)]="currency" placeholder="EUR, USD, MAD">
-                </div>
+                <input type="text" id="document-name" class="form-control form-control-lg" [(ngModel)]="documentName" placeholder="Example: ACME invoice June 2026">
               </div>
 
               <div class="form-row">
-                <!-- Document Date -->
                 <div class="form-group col-6">
-                  <label class="form-label" for="invoice-date">{{ 'dms.invoice_date' | translate }}</label>
+                  <label class="form-label" for="invoice-date">Document date</label>
                   <input type="date" id="invoice-date" class="form-control" [(ngModel)]="documentDate">
+                  <small class="field-hint">Used for both invoice and non-invoice documents.</small>
                 </div>
 
-                <!-- Due Date -->
                 <div class="form-group col-6">
-                  <label class="form-label" for="invoice-duedate">Due Date</label>
+                  <label class="form-label" for="invoice-duedate">Due date</label>
                   <input type="date" id="invoice-duedate" class="form-control" [(ngModel)]="dueDate">
+                  <small class="field-hint">Optional for non-facturable documents.</small>
                 </div>
               </div>
 
-              <!-- Partner/Vendor Selection -->
-              <div class="form-group">
-                <label class="form-label" for="invoice-partner">{{ 'dms.vendor' | translate }}</label>
-                <select id="invoice-partner" class="form-control" [(ngModel)]="selectedPartnerId">
-                  <option [ngValue]="null">-- Select Vendor/Partner --</option>
-                  @for (partner of partners(); track partner.id) {
-                    <option [ngValue]="partner.id">{{ partner.companyName }}</option>
-                  }
-                </select>
+              <div class="invoice-toggle-card" [class.invoice-toggle-card-active]="isInvoice">
+                <label class="invoice-toggle-row" for="invoice-toggle">
+                  <span class="invoice-toggle-copy">
+                    <span class="invoice-toggle-title">Facturable ?</span>
+                    <span class="invoice-toggle-subtitle">If OCR missed the invoice type, you can override it here.</span>
+                  </span>
+                  <span class="invoice-switch">
+                    <input id="invoice-toggle" type="checkbox" [(ngModel)]="isInvoice" (ngModelChange)="onInvoiceToggle($event)">
+                    <span class="invoice-switch-track">
+                      <span class="invoice-switch-thumb"></span>
+                    </span>
+                  </span>
+                </label>
               </div>
 
-              <div class="form-row text-fields">
-                <!-- Total HT -->
-                <div class="form-group col-4">
-                  <label class="form-label" for="amount-ht">{{ 'dms.amount_ht' | translate }}</label>
-                  <input type="number" step="0.01" id="amount-ht" class="form-control" [(ngModel)]="totalHt" (input)="recalculateTtc()">
-                </div>
+              @if (isInvoice) {
+                <div class="billing-section">
+                  <div class="billing-section-header">
+                    <div>
+                      <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+                          <path d="M440-120v-80H280v-80h360q17 0 28.5-11.5T680-320q0-17-11.5-28.5T640-360H360q-50 0-85-35t-35-85q0-50 35-85t85-35h80v-80h80v80h160v80H320q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440h280q50 0 85 35t35 85q0 50-35 85t-85 35h-40v80h-80Z"/>
+                        </svg>
+                        Billing details
+                      </h4>
+                      <p>Visible only for facturable documents. This block is highlighted to guide the user through invoice validation.</p>
+                    </div>
+                  </div>
 
-                <!-- VAT Amount -->
-                <div class="form-group col-4">
-                  <label class="form-label" for="amount-tva">{{ 'dms.amount_tva' | translate }}</label>
-                  <input type="number" step="0.01" id="amount-tva" class="form-control" [(ngModel)]="tva" (input)="recalculateTtc()">
-                </div>
+                  <div class="form-row">
+                    <div class="form-group col-6">
+                      <label class="form-label" for="invoice-number">Invoice number</label>
+                      <input type="text" id="invoice-number" class="form-control" [(ngModel)]="invoiceNumber" placeholder="INV-2026-001">
+                    </div>
 
-                <!-- Total TTC -->
-                <div class="form-group col-4">
-                  <label class="form-label" for="amount-ttc">{{ 'dms.amount_ttc' | translate }}</label>
-                  <input type="number" step="0.01" id="amount-ttc" class="form-control" [(ngModel)]="totalTtc">
-                </div>
-              </div>
+                    <div class="form-group col-6">
+                      <label class="form-label" for="invoice-partner">Vendor / Partner</label>
+                      <select id="invoice-partner" class="form-control" [(ngModel)]="selectedPartnerId">
+                        <option [ngValue]="null">-- Select Vendor/Partner --</option>
+                        @for (partner of partners(); track partner.id) {
+                          <option [ngValue]="partner.id">{{ partner.companyName }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
 
-              <!-- Line Items Grid -->
-              <div class="line-items-section">
-                <div class="line-items-header">
-                  <h5>{{ 'dms.line_items' | translate }}</h5>
-                  <button type="button" class="btn btn-secondary btn-xs" (click)="addLineItem()">+ Add Item</button>
+                  <div class="form-row text-fields">
+                    <div class="form-group col-4">
+                      <label class="form-label" for="amount-ht">HT</label>
+                      <input type="number" step="0.01" id="amount-ht" class="form-control" [(ngModel)]="totalHt" (input)="recalculateTtc()" placeholder="0.00">
+                    </div>
+
+                    <div class="form-group col-4">
+                      <label class="form-label" for="amount-tva">VAT</label>
+                      <input type="number" step="0.01" id="amount-tva" class="form-control" [(ngModel)]="tva" (input)="recalculateTtc()" placeholder="0.00">
+                    </div>
+
+                    <div class="form-group col-4">
+                      <label class="form-label" for="amount-ttc">TTC</label>
+                      <input type="number" step="0.01" id="amount-ttc" class="form-control" [(ngModel)]="totalTtc" placeholder="0.00">
+                    </div>
+                  </div>
+
+                  <div class="line-items-section billing-highlight">
+                    <div class="line-items-header">
+                      <div>
+                        <h5>
+                          <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+                            <path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T680-80H240Zm280-570v-150H240v640h480v-490H520ZM240-800v150-150 640-640Z"/>
+                          </svg>
+                          Billing line items
+                        </h5>
+                        <span class="billing-section-subtitle">Add or correct extracted amounts before saving.</span>
+                      </div>
+                      <button type="button" class="btn btn-secondary btn-xs" (click)="addLineItem()">+ Add Item</button>
+                    </div>
+
+                    <div class="line-items-table-container">
+                      <table class="line-items-table">
+                        <thead>
+                          <tr>
+                            <th>Description</th>
+                            <th style="width: 80px;">Qty</th>
+                            <th style="width: 100px;">Unit</th>
+                            <th style="width: 100px;">Total</th>
+                            <th style="width: 50px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (item of lineItems(); track $index; let idx = $index) {
+                            <tr>
+                              <td>
+                                <input type="text" class="table-input" [(ngModel)]="item.description" placeholder="Item description">
+                              </td>
+                              <td>
+                                <input type="number" class="table-input text-right" [(ngModel)]="item.quantity" (input)="updateItemTotal(idx)">
+                              </td>
+                              <td>
+                                <input type="number" step="0.01" class="table-input text-right" [(ngModel)]="item.unitPrice" (input)="updateItemTotal(idx)">
+                              </td>
+                              <td class="text-right text-bold">
+                                {{ item.total | number:'1.2-2' }}
+                              </td>
+                              <td class="text-center">
+                                <button type="button" class="btn-item-remove" (click)="removeLineItem(idx)">
+                                  <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="var(--error)">
+                                    <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm80-160h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                          }
+                          @if (lineItems().length === 0) {
+                            <tr>
+                              <td colspan="5" class="table-empty-row">No line items extracted.</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-                
-                <div class="line-items-table-container">
-                  <table class="line-items-table">
-                    <thead>
-                      <tr>
-                        <th>{{ 'dms.description' | translate }}</th>
-                        <th style="width: 80px;">{{ 'dms.quantity' | translate }}</th>
-                        <th style="width: 100px;">{{ 'dms.unit_price' | translate }}</th>
-                        <th style="width: 100px;">{{ 'dms.total' | translate }}</th>
-                        <th style="width: 50px;"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (item of lineItems(); track $index; let idx = $index) {
-                        <tr>
-                          <td>
-                            <input type="text" class="table-input" [(ngModel)]="item.description">
-                          </td>
-                          <td>
-                            <input type="number" class="table-input text-right" [(ngModel)]="item.quantity" (input)="updateItemTotal(idx)">
-                          </td>
-                          <td>
-                            <input type="number" step="0.01" class="table-input text-right" [(ngModel)]="item.unitPrice" (input)="updateItemTotal(idx)">
-                          </td>
-                          <td class="text-right text-bold">
-                            {{ item.total | number:'1.2-2' }}
-                          </td>
-                          <td class="text-center">
-                            <button type="button" class="btn-item-remove" (click)="removeLineItem(idx)">
-                              <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="var(--error)">
-                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm80-160h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/>
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      }
-                      @if (lineItems().length === 0) {
-                        <tr>
-                          <td colspan="5" class="table-empty-row">No line items extracted.</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+              } @else {
+                <div class="non-invoice-card">
+                  <div class="non-invoice-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor">
+                      <path d="M480-120q-92 0-172-35t-139-94q-59-59-94-139T40-560q0-92 35-172t94-139q59-59 139-94t172-35q92 0 172 35t139 94q59 59 94 139t35 172q0 92-35 172t-94 139q-59 59-139 94t-172 35Zm0-80q142 0 241-99t99-241q0-142-99-241t-241-99q-142 0-241 99T140-560q0 142 99 241t241 99Zm-40-160h80v-80h-80v80Zm0-160h80v-240h-80v240Z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h5>Non-facturable document</h5>
+                    <p>Billing fields are hidden. You can still keep the document name and dates above, and switch this back on anytime.</p>
+                  </div>
                 </div>
-              </div>
+              }
             }
           </div>
         </div>
@@ -400,6 +444,150 @@ type PreviewTab = 'raw' | 'ocr';
       border-left: 3px solid var(--primary);
       padding-left: 8px;
       margin-bottom: 8px;
+    }
+    .section-title-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+      border-left-color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .field-hint {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .invoice-toggle-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      padding: 14px 16px;
+      transition: all var(--transition-fast);
+    }
+    .invoice-toggle-card-active {
+      border-color: rgba(0, 120, 212, 0.35);
+      box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.08);
+    }
+    .invoice-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+    .invoice-toggle-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .invoice-toggle-title {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .invoice-toggle-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .invoice-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .invoice-switch input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .invoice-switch-track {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      background: var(--border-color);
+      border-radius: 999px;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+    .invoice-switch-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast);
+    }
+    .invoice-switch input:checked + .invoice-switch-track {
+      background: var(--primary);
+    }
+    .invoice-switch input:checked + .invoice-switch-track .invoice-switch-thumb {
+      transform: translateX(22px);
+    }
+    .billing-section {
+      border: 1px solid rgba(0, 120, 212, 0.18);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(0, 120, 212, 0.06), rgba(0, 120, 212, 0.02));
+      box-shadow: 0 12px 28px rgba(0, 120, 212, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .billing-section-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .billing-section-header h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      font-size: 0.98rem;
+      font-weight: 800;
+    }
+    .billing-section-header p {
+      margin-top: 4px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      max-width: 680px;
+      line-height: 1.4;
+    }
+    .billing-highlight {
+      border-color: rgba(0, 120, 212, 0.22);
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .non-invoice-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      background: var(--bg-tertiary);
+    }
+    .non-invoice-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .non-invoice-card h5 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
     }
     .form-row {
       display: flex;
@@ -584,6 +772,7 @@ export class OcrReviewModalComponent implements OnInit, OnDestroy {
   lineItems = signal<InvoiceLineItem[]>([]);
 
   // Form bindings
+  isInvoice = false;
   invoiceNumber = '';
   documentName = '';
   currency = 'EUR';
@@ -630,6 +819,7 @@ export class OcrReviewModalComponent implements OnInit, OnDestroy {
 
         if (res.doc?.success && res.doc.data) {
           const doc: DocumentDto = res.doc.data;
+          this.isInvoice = !!doc.isInvoice;
           this.invoiceNumber = doc.invoiceNumber || '';
           this.documentName = doc.filename || doc.originalFilename || this.docName || '';
           this.docName = this.documentName;
@@ -730,6 +920,13 @@ export class OcrReviewModalComponent implements OnInit, OnDestroy {
     ]);
   }
 
+  onInvoiceToggle(nextValue: boolean) {
+    this.isInvoice = nextValue;
+    if (!nextValue) {
+      this.selectedPartnerId = null;
+    }
+  }
+
   updateItemTotal(index: number) {
     const items = [...this.lineItems()];
     const item = items[index];
@@ -767,19 +964,20 @@ export class OcrReviewModalComponent implements OnInit, OnDestroy {
     // Prepare partial update DTO
     const updatePayload: Partial<DocumentDto> = {
       filename: this.documentName,
-      invoiceNumber: this.invoiceNumber,
-      currency: this.currency,
-      totalHt: Number(this.totalHt),
-      tva: Number(this.tva),
-      totalTtc: Number(this.totalTtc),
-      documentDate: this.documentDate ? `${this.documentDate}T00:00:00` : undefined,
-      dueDate: this.dueDate ? `${this.dueDate}T00:00:00` : undefined,
-      extractedData: {
+      isInvoice: this.isInvoice,
+      invoiceNumber: this.isInvoice ? this.invoiceNumber : undefined,
+      currency: this.isInvoice ? this.currency : undefined,
+      totalHt: this.isInvoice ? Number(this.totalHt) : undefined,
+      tva: this.isInvoice ? Number(this.tva) : undefined,
+      totalTtc: this.isInvoice ? Number(this.totalTtc) : undefined,
+      documentDate: this.documentDate || undefined,
+      dueDate: this.dueDate || undefined,
+      extractedData: this.isInvoice ? {
         line_items: this.lineItems()
-      }
+      } : undefined
     };
 
-    const partnerId = this.selectedPartnerId ? Number(this.selectedPartnerId) : undefined;
+    const partnerId = this.isInvoice && this.selectedPartnerId ? Number(this.selectedPartnerId) : undefined;
 
     this.documentService.update(this.docId, updatePayload, partnerId).subscribe({
       next: (res) => {

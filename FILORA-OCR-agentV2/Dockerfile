@@ -20,7 +20,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DEFAULT_TIMEOUT=300 \
     PIP_RETRIES=10 \
-    PIP_PROGRESS_BAR=off
+    PIP_PROGRESS_BAR=on
 RUN pip install --no-cache-dir --retries 10 --timeout 300 \
         --index-url https://pypi.org/simple \
         --trusted-host pypi.org \

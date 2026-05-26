@@ -6,6 +6,8 @@ import com.filora.dms.entity.Document;
 import com.filora.dms.entity.User;
 import com.filora.dms.repository.UserRepository;
 import com.filora.dms.service.DocumentService;
+import com.filora.dms.service.UserService;
+import com.filora.dms.entity.CompanyEntity;
 import com.filora.dms.service.FileStorageService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -34,6 +36,7 @@ public class DocumentController {
     private final DocumentService documentService;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<DocumentDto>>> searchDocuments(
@@ -54,6 +57,40 @@ public class DocumentController {
 
         Page<DocumentDto> docs = documentService.searchDocuments(companyId, docTypeId, query, pageable)
                 .map(DocumentDto::fromEntity);
+
+        return ResponseEntity.ok(ApiResponse.success("Documents retrieved successfully", docs));
+    }
+
+    @GetMapping("/search/global")
+    public ResponseEntity<ApiResponse<Page<DocumentDto>>> globalSearchDocuments(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Principal principal) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Resolve current user and their assigned entities
+        User currentUser = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Current user not found"));
+
+        List<CompanyEntity> assigned = userService.getAssignedEntities(currentUser.getId());
+        List<Integer> companyIds = assigned.stream().map(CompanyEntity::getId).collect(Collectors.toList());
+
+        Page<DocumentDto> docs;
+        if (companyIds.isEmpty()) {
+            // If user has no assigned entities, allow admins/superusers to search globally
+            String role = currentUser.getRole() != null ? currentUser.getRole().toLowerCase() : "";
+            boolean isAdmin = role.contains("admin") || role.contains("superuser") || role.contains("super_admin") || role.contains("superadmin");
+            if (isAdmin) {
+                docs = documentService.searchDocumentsAll(query, pageable).map(DocumentDto::fromEntity);
+            } else {
+                docs = Page.<com.filora.dms.entity.Document>empty(pageable).map(DocumentDto::fromEntity);
+            }
+        } else {
+            docs = documentService.searchDocumentsAcrossCompanies(companyIds, query, pageable)
+                    .map(DocumentDto::fromEntity);
+        }
 
         return ResponseEntity.ok(ApiResponse.success("Documents retrieved successfully", docs));
     }

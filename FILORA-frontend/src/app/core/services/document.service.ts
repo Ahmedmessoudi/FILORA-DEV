@@ -25,7 +25,9 @@ export interface DocumentDto {
   createdAt: string;
   ownerName: string;
   companyName: string;
-  docTypeName: string;
+  companyId?: number;
+  docTypeName?: string;
+  docTypeId?: number;
   partnerId?: number;
   partnerName?: string;
 }
@@ -134,5 +136,17 @@ export class DocumentService {
 
   getDownloadUrl(id: number): string {
     return `${this.apiUrl}/${id}/download`;
+  }
+
+  globalSearch(query: string, page: number = 0, size: number = 5): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (query) {
+      params = params.set('query', query);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/search/global`, { params, withCredentials: true });
   }
 }

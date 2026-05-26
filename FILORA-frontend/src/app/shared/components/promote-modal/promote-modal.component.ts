@@ -16,7 +16,14 @@ import { forkJoin } from 'rxjs';
     <div class="modal-overlay" (click)="onCancel()">
       <div class="modal-container glass-panel" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>{{ 'dms.promote_title' | translate }}</h3>
+          <div class="header-left">
+            <h3>{{ 'dms.promote_title' | translate }}</h3>
+            <div class="stepper">
+              <div class="step" [class.active]="!nextStep()">1/2 Assign</div>
+              <div class="step-divider"></div>
+              <div class="step" [class.active]="nextStep()">2/2 OCR</div>
+            </div>
+          </div>
           <button class="btn-close" (click)="onCancel()" aria-label="Close">
             <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
               <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
@@ -31,6 +38,15 @@ import { forkJoin } from 'rxjs';
               <span>Loading categories...</span>
             </div>
           } @else {
+            @if (!nextStep()) {
+              <!-- Step 1: company & doctype selection -->
+            } @else {
+              <!-- Step 2: Processing OCR indicator -->
+              <div class="processing-step">
+                <div class="spinner"></div>
+                <div class="processing-text">Applying OCR and creating document. Please wait...</div>
+              </div>
+            }
             <!-- Company Selection -->
             <div class="form-group">
               <label class="form-label" for="company-select">{{ 'dms.select_company' | translate }}</label>
@@ -60,14 +76,19 @@ import { forkJoin } from 'rxjs';
 
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="onCancel()">{{ 'dms.cancel' | translate }}</button>
-          <button class="btn btn-primary" 
-                  [disabled]="!selectedCompanyId || !selectedDocTypeId || promoting()" 
+          <button class="btn btn-primary"
+                  *ngIf="!nextStep()"
+                  [disabled]="!selectedCompanyId || !selectedDocTypeId || promoting()"
                   (click)="onConfirm()">
             @if (promoting()) {
               <div class="spinner-sm"></div>
             } @else {
               {{ 'dms.confirm' | translate }}
             }
+          </button>
+          <button class="btn btn-primary" *ngIf="nextStep()" disabled>
+            <div class="spinner-sm"></div>
+            <span>Processing...</span>
           </button>
         </div>
       </div>
@@ -85,7 +106,7 @@ import { forkJoin } from 'rxjs';
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1100;
+      z-index: 1150;
       animation: fade-in 0.2s ease-out;
     }
     .modal-container {
@@ -137,6 +158,12 @@ import { forkJoin } from 'rxjs';
       padding: 24px;
       color: var(--text-secondary);
     }
+    .stepper { display:flex; align-items:center; gap:8px; margin-top:6px; }
+    .step { padding:4px 8px; border-radius:6px; font-size:0.8rem; color:var(--text-muted); background:var(--bg-primary); }
+    .step.active { background:var(--primary); color:#fff; font-weight:700; }
+    .step-divider { width:18px; height:2px; background:var(--border-color); border-radius:2px; }
+    .processing-step { display:flex; gap:12px; align-items:center; justify-content:center; padding:18px 0; flex-direction:column; }
+    .processing-text { color:var(--text-secondary); font-size:0.95rem; }
     .spinner {
       width: 32px;
       height: 32px;
@@ -196,6 +223,7 @@ export class PromoteModalComponent implements OnInit {
 
   loading = signal(true);
   promoting = signal(false);
+  nextStep = signal(false);
 
   ngOnInit() {
     this.loadMappings();
@@ -278,9 +306,14 @@ export class PromoteModalComponent implements OnInit {
       next: (res) => {
         this.promoting.set(false);
         if (res.success) {
+          // Transition to step 2 (processing OCR) to inform the user
+          this.nextStep.set(true);
           this.toastService.success('Success', `Document "${this.docName}" promoted successfully.`);
           const createdId = res.data?.id;
-          this.promoted.emit(createdId);
+          // Give a short moment for the user to perceive the step change before closing
+          setTimeout(() => {
+            this.promoted.emit(createdId);
+          }, 700);
         } else {
           this.toastService.error('Failure', res.message || 'Failed to promote document.');
         }

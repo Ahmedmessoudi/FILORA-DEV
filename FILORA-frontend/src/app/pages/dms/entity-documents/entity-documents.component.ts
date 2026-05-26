@@ -243,8 +243,8 @@ import JSZip from 'jszip';
               </thead>
               <tbody>
                 @for (doc of filteredDocuments(); track doc.id; let idx = $index) {
-                  <tr [class.selected]="selectedIds().has(doc.id)"
-                      [class.overdue]="hasDocumentIssue(doc)">
+                      <tr [attr.data-doc-id]="doc.id" [class.selected]="selectedIds().has(doc.id)"
+                        [class.overdue]="hasDocumentIssue(doc)">
                     <td class="text-center">{{ idx + 1 }}</td>
                     <td>
                       <label class="checkbox-container">
@@ -381,7 +381,9 @@ import JSZip from 'jszip';
       <app-upload-modal
         [companyId]="companyId"
         [docTypeId]="doctypeId"
-        (uploaded)="onUploadComplete()"
+        [companyName]="companyName()"
+        [docTypeName]="docTypeName()"
+        (uploaded)="onUploadComplete($event)"
         (cancel)="showUploadModal.set(false)">
       </app-upload-modal>
     }
@@ -852,6 +854,7 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   private readonly partnerService = inject(PartnerService);
   private readonly toastService = inject(ToastService);
   private readonly settingsService = inject(SettingsService);
+  private readonly router = inject(Router);
 
   companyId!: number;
   doctypeId!: number;
@@ -1058,6 +1061,8 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   });
 
   private routeSub!: Subscription;
+  private querySub!: Subscription;
+  private pendingOpenDocId: number | null = null;
 
   ngOnInit() {
     // Listen to route params change
@@ -1068,6 +1073,12 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
       this.resetFilters();
       this.searchQuery = '';
       this.initializePage();
+    });
+
+    // Listen for optional docId query param to open a specific document
+    this.querySub = this.route.queryParamMap.subscribe(q => {
+      const docIdParam = q.get('docId');
+      this.pendingOpenDocId = docIdParam ? Number(docIdParam) : null;
     });
 
     // Close active dropdowns on global click
@@ -1081,8 +1092,62 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
     });
   }
 
+  private tryOpenPendingDoc() {
+    const id = this.pendingOpenDocId;
+    if (!id) return;
+
+    // If the document is already loaded, open it; otherwise, try to load pages until found
+    const found = this.documents().find(d => d.id === id);
+    if (found) {
+      // Open preview in a new tab
+      window.open(this.documentService.getPreviewUrl(id), '_blank');
+      this.pendingOpenDocId = null;
+      // Also scroll table to the row if visible
+      setTimeout(() => {
+        const row = document.querySelector(`tr[data-doc-id=\"${id}\"]`);
+        if (row) (row as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+      return;
+    }
+
+    // If not found and more pages are available, keep loading
+    if (this.hasMoreDocuments()) {
+      this.loadDocuments(false);
+    } else {
+      // If we've exhausted pages, try fetching the document directly
+      if (!this.hasMoreDocuments()) {
+        this.documentService.getById(id).subscribe({
+          next: (res) => {
+            if (res.success && res.data) {
+              const doc = res.data as DocumentDto;
+              if (doc.companyId !== this.companyId) {
+                // navigate to its company page
+                this.router.navigate(['/dms/entity', doc.companyId], { queryParams: { docId: id } });
+                this.pendingOpenDocId = null;
+                return;
+              }
+              // Insert the document at top and scroll to it
+              this.documents.update(cur => [doc, ...cur]);
+              setTimeout(() => {
+                const row = document.querySelector(`tr[data-doc-id=\"${id}\"]`);
+                if (row) (row as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                this.selectedIds.update(s => { const ns = new Set(s); ns.add(id); return ns; });
+              }, 120);
+            }
+            this.pendingOpenDocId = null;
+          },
+          error: () => { this.pendingOpenDocId = null; }
+        });
+      } else {
+        // still have pages, request next
+        this.loadDocuments(false);
+      }
+    }
+  }
+
   ngOnDestroy() {
     if (this.routeSub) this.routeSub.unsubscribe();
+    if (this.querySub) this.querySub.unsubscribe();
     window.removeEventListener('click', this.closeDropdownGlobal);
   }
 
@@ -1172,6 +1237,10 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
           // Page contains "content" array
           const content = res.data?.content || [];
           this.documents.update(current => reset ? content : [...current, ...content]);
+          // If a docId was requested via query param, try to open/scroll to it
+          if (this.pendingOpenDocId) {
+            this.tryOpenPendingDoc();
+          }
           this.currentPage = nextPage + 1;
           const isLastPage = res.data?.last ?? content.length < this.pageSize();
           this.hasMoreDocuments.set(!isLastPage && content.length > 0);
@@ -1277,9 +1346,20 @@ export class EntityDocumentsComponent implements OnInit, OnDestroy {
   }
 
   // Modals Complete Triggers
-  onUploadComplete() {
+  onUploadComplete(uploadedIds?: number[]) {
     this.showUploadModal.set(false);
     this.loadDocuments(true);
+
+    // If documents were created (upload to this entity), open OCR review for the first
+    if (uploadedIds && uploadedIds.length > 0) {
+      const firstId = uploadedIds[0];
+      setTimeout(() => {
+        this.activeOcrReviewId.set(firstId);
+        // optional: set name if available in list
+        const doc = this.documents().find(d => d.id === firstId);
+        this.activeOcrReviewName.set(doc ? doc.filename : 'Uploaded document');
+      }, 300);
+    }
   }
 
   openOcrReview(doc: DocumentDto) {

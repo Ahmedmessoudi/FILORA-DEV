@@ -34,4 +34,22 @@ public interface DocumentRepository extends JpaRepository<Document, Integer>, Jp
                                    @Param("docTypeId") Integer docTypeId, 
                                    @Param("query") String query, 
                                    Pageable pageable);
+
+            @Query(value = "SELECT * FROM documents d WHERE d.company_id IN (:companyIds) AND d.is_deleted = false " +
+                   "AND ( :query IS NULL OR :query = '' OR d.filename ILIKE ('%' || :query || '%') OR d.original_filename ILIKE ('%' || :query || '%')) " +
+                   "ORDER BY d.created_at DESC",
+               countQuery = "SELECT count(*) FROM documents d WHERE d.company_id IN (:companyIds) AND d.is_deleted = false " +
+                   "AND ( :query IS NULL OR :query = '' OR d.filename ILIKE ('%' || :query || '%') OR d.original_filename ILIKE ('%' || :query || '%'))",
+               nativeQuery = true)
+            Page<Document> searchDocumentsAcrossCompanies(@Param("companyIds") List<Integer> companyIds,
+                                  @Param("query") String query,
+                                  Pageable pageable);
+
+            @Query(value = "SELECT * FROM documents d WHERE d.is_deleted = false " +
+                   "AND ( :query IS NULL OR :query = '' OR d.filename ILIKE ('%' || :query || '%') OR d.original_filename ILIKE ('%' || :query || '%')) " +
+                   "ORDER BY d.created_at DESC",
+               countQuery = "SELECT count(*) FROM documents d WHERE d.is_deleted = false " +
+                   "AND ( :query IS NULL OR :query = '' OR d.filename ILIKE ('%' || :query || '%') OR d.original_filename ILIKE ('%' || :query || '%'))",
+               nativeQuery = true)
+            Page<Document> searchDocumentsAll(@Param("query") String query, Pageable pageable);
 }

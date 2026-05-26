@@ -45,6 +45,17 @@ public class DocumentService {
         return documentRepository.searchDocuments(companyId, docTypeId, query, pageable);
     }
 
+    public Page<Document> searchDocumentsAcrossCompanies(List<Integer> companyIds, String query, Pageable pageable) {
+        if (companyIds == null || companyIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        return documentRepository.searchDocumentsAcrossCompanies(companyIds, query, pageable);
+    }
+
+    public Page<Document> searchDocumentsAll(String query, Pageable pageable) {
+        return documentRepository.searchDocumentsAll(query, pageable);
+    }
+
     public Optional<Document> getDocumentById(Integer id) {
         return documentRepository.findById(id).filter(doc -> !doc.getIsDeleted());
     }
@@ -104,7 +115,19 @@ public class DocumentService {
         if (updated.getOriginalFilename() != null && !updated.getOriginalFilename().isBlank()) {
             existing.setOriginalFilename(updated.getOriginalFilename());
         }
-        if (updated.getIsInvoice() != null) existing.setIsInvoice(updated.getIsInvoice());
+        if (updated.getIsInvoice() != null) {
+            existing.setIsInvoice(updated.getIsInvoice());
+            if (!updated.getIsInvoice()) {
+                existing.setInvoiceNumber(null);
+                existing.setPartner(null);
+                existing.setTotalHt(null);
+                existing.setTvaRate(null);
+                existing.setTva(null);
+                existing.setTotalTtc(null);
+                existing.setCurrency(null);
+                existing.setExtractedData(null);
+            }
+        }
         if (updated.getInvoiceNumber() != null) existing.setInvoiceNumber(updated.getInvoiceNumber());
         if (updated.getDocumentDate() != null) existing.setDocumentDate(updated.getDocumentDate());
         if (updated.getDueDate() != null) existing.setDueDate(updated.getDueDate());

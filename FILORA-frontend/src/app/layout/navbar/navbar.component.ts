@@ -1,9 +1,10 @@
-import { Component, Output, EventEmitter, inject, signal } from '@angular/core';
+import { Component, Output, EventEmitter, inject, signal, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { DocumentService, DocumentDto } from '../../core/services/document.service';
 
 @Component({
   selector: 'app-navbar',
@@ -24,6 +25,44 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
           <span class="logo-text-gradient">Filora</span>
           <span class="logo-subtext">DMS</span>
         </a>
+      </div>
+
+      <div class="navbar-center">
+        <div class="search-wrapper">
+          <input
+            #searchInput
+            class="search-input"
+            type="search"
+            placeholder="Search documents..."
+            [value]="searchQuery()"
+            (input)="onSearch($event)"
+            (blur)="onBlur()"
+            aria-label="Search documents by filename"
+          />
+
+          @if (searchResults().length > 0) {
+            <div class="search-dropdown" [ngStyle]="dropdownStyle()">
+              @for (r of searchResults(); track r.id) {
+                <button class="search-item" (click)="goToDocument(r)">
+                  <div class="search-item-left">
+                    <div class="search-item-top">
+                      <span class="doc-id-badge">#{{ r.id }}</span>
+                      <strong class="search-filename">{{ r.filename || r.originalFilename }}</strong>
+                    </div>
+                    <div class="search-item-meta">
+                      <span class="tag entity-tag">{{ r.companyName }}</span>
+                      <span class="tag doctype-tag">{{ r.docTypeName }}</span>
+                      <span class="tag invoice-tag">{{ r.isInvoice ? (translationService.currentLang() === 'fr' ? 'Facturable' : 'Billable') : (translationService.currentLang() === 'fr' ? 'Non facturable' : 'Non-billable') }}</span>
+                    </div>
+                    @if (r.originalFilename && r.originalFilename !== r.filename) {
+                      <div class="original-name">Uploaded as: {{ r.originalFilename }}</div>
+                    }
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
       </div>
 
       <div class="navbar-right">
@@ -165,6 +204,77 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       text-transform: uppercase;
       letter-spacing: 1px;
     }
+    .navbar-center {
+      flex: 1 1 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .search-wrapper {
+      position: relative;
+      width: 420px;
+      max-width: 60vw;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      outline: none;
+    }
+    .search-input:focus {
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.08);
+      border-color: var(--primary);
+    }
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 250;
+      max-height: 320px;
+      overflow: auto;
+    }
+    .search-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .search-item:hover {
+      background-color: var(--primary-light);
+      color: var(--primary);
+    }
+    .search-item-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .search-item-top { display:flex; gap:8px; align-items:center; }
+    .doc-id-badge { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); background: var(--bg-primary); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-color); }
+    .search-filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: calc(100% - 60px); font-weight: 600; }
+    .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 999px;
+      margin-right: 6px;
+      color: #fff;
+    }
+    .entity-tag { background: #7c3aed; }
+    .doctype-tag { background: #0ea5e9; }
+    .invoice-tag { background: #10b981; }
+    .original-name { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
     .theme-toggle-btn {
       padding: 8px;
       border-radius: var(--radius-md);
@@ -397,6 +507,16 @@ export class NavbarComponent {
   showTools = signal(false);
   showProfile = signal(false);
   isDark = signal(false);
+  private readonly documentService = inject(DocumentService);
+
+  // Search state
+  searchQuery = signal('');
+  searchResults = signal<DocumentDto[]>([]);
+  searchLoading = signal(false);
+  dropdownStyle = signal<Record<string,string>>({});
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  private debounceTimer: any = null;
+  private onWindowResizeOrScroll = () => this.updateDropdownPosition();
 
   constructor() {
     // Check if dark theme was saved in localStorage
@@ -437,5 +557,95 @@ export class NavbarComponent {
   toggleLanguage() {
     const nextLang = this.translationService.currentLang() === 'fr' ? 'en' : 'fr';
     this.translationService.setLanguage(nextLang);
+  }
+
+  onSearch(event: any) {
+    const q = event.target.value || '';
+    this.searchQuery.set(q);
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => this.executeSearch(q), 300);
+  }
+
+  executeSearch(q: string) {
+    if (!q || q.trim() === '') {
+      this.searchResults.set([]);
+      return;
+    }
+
+    this.searchLoading.set(true);
+      this.documentService.globalSearch(q, 0, 6).subscribe({
+        next: (res) => {
+          // Support ApiResponse.data.content or direct paging object
+          const items = res?.data?.content || res?.content || [];
+        this.searchResults.set(items);
+        this.searchLoading.set(false);
+        // Position the dropdown on screen to avoid being covered by other elements
+        this.updateDropdownPosition();
+      },
+      error: (err) => {
+        console.error('globalSearch error', err);
+        this.searchLoading.set(false);
+      }
+    });
+  }
+
+  goToDocument(r: DocumentDto) {
+    if (!r || !r.id) return;
+    // Prefer navigating to the entity documents page so the user lands in context
+    if (r.companyId) {
+      this.router.navigate(['/dms/entity', r.companyId], { queryParams: { docId: r.id } });
+    } else {
+      // fallback: open preview directly
+      window.open(this.documentService.getPreviewUrl(r.id), '_blank');
+    }
+    this.searchResults.set([]);
+    this.searchQuery.set('');
+  }
+
+  onBlur() {
+    // Delay clearing so click handlers have a chance to run
+    setTimeout(() => this.searchResults.set([]), 180);
+  }
+
+  ngAfterViewInit(): void {
+    // Recompute position on resize/scroll
+    window.addEventListener('resize', this.onWindowResizeOrScroll);
+    // Use capture to catch scrolls on any ancestor
+    window.addEventListener('scroll', this.onWindowResizeOrScroll, true);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('resize', this.onWindowResizeOrScroll);
+    window.removeEventListener('scroll', this.onWindowResizeOrScroll, true);
+  }
+
+  private updateDropdownPosition() {
+    // Defer to ensure DOM updated
+    setTimeout(() => {
+      try {
+        const inputEl = this.searchInput?.nativeElement;
+        if (!inputEl || this.searchResults().length === 0) {
+          this.dropdownStyle.set({});
+          return;
+        }
+
+        const rect = inputEl.getBoundingClientRect();
+        const top = Math.round(rect.bottom + 8);
+        const left = Math.round(rect.left);
+        const width = Math.max(200, Math.round(rect.width));
+
+        this.dropdownStyle.set({
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          zIndex: '99999',
+          maxHeight: '320px',
+          overflow: 'auto'
+        });
+      } catch (e) {
+        // ignore positioning errors
+      }
+    }, 0);
   }
 }
